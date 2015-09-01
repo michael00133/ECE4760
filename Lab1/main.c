@@ -1,7 +1,5 @@
-<<<<<<< HEAD
 /*Code goes here */
 /*HEHEHE*/
-=======
 /*
  * File:        main.c
  * Author:      Syed Tahmid Mahbub
