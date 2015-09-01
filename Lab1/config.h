@@ -1,6 +1,5 @@
 /*
  * File:   config.h
- *
  * Author: Syed Tahmid Mahbub
  *
  * Created on October 10, 2014
