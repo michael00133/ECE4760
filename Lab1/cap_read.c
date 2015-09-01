@@ -24,7 +24,13 @@ static PT_THREAD (protothread_blink(struct pt *pt))
 {
     PT_BEGIN(pt);
     while(1) {
-    }
+	
+	PT_YIELD_TIME_msec(1000);
+    	tft_drawCircle(10, 10, 10, ILI9340_WHITE);
+
+	PT_YIELD_TIME_msec(1000);
+	tft_drawCircle(10, 10, 10, ILI9340_BLACK); 
+   }
     PT_END(pt);
 }
 
