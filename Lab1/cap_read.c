@@ -36,7 +36,7 @@ static PT_THREAD (protothread_blink(struct pt *pt))
 } // blink
 
 //===================== Capture ==================== //
-// Discharges and begins capture
+// Discharges and begins measurement of C1INA
 static PT_THREAD (protothread_capture(struct pt *pt))
 {
     PT_BEGIN(pt);
@@ -46,10 +46,11 @@ static PT_THREAD (protothread_capture(struct pt *pt))
     PT_YIELD_TIME_msec(1);
 
     //begin timer and sets pin 7 as input
-    PPSInput(1, IC4, RPB3);
+    PPSInput(1, C1INA, RPB3);
     OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_32, 0xffffffff);
+    capture1 = 0;
 
-
+    //reset the timer somehow here?
     CloseTimer2();	
     }
     PT_END(pt);
@@ -58,8 +59,7 @@ static PT_THREAD (protothread_capture(struct pt *pt))
 //===================== Capture ISR =============== //
 void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
 {
-    capture1 = mIC1ReadCapture();
-
+     capture1 = mIC1ReadCapture();
      // clear the timer interrupt flag
      mIC1ClearIntFlag();
 }
@@ -95,6 +95,7 @@ void main(void) {
     // initialize the input/output I/O
     PPSOutput(1, RPB3, C1INA);		//initially an output
     PPSOutput(4, RPB9, C1OUT);		//set up output of comparator for debugging
+    PPSInput(3, IC1, RPB2);		//Either Pin 6 or Pin 24 idk
    
     //round-robin scheduler for threads
     while(1) {
