@@ -16,7 +16,7 @@
 #define SYS_FREQ 40000000
 #include "pt_cornell_TFT.h"
 
-static struct pt pt_blink;
+static struct pt pt_blink, pt_capture;
 
 //======================= Blink ========================= //
 // Blinks a circle on the screen at a rate of 1 blink per second
@@ -32,7 +32,18 @@ static PT_THREAD (protothread_blink(struct pt *pt))
 	tft_drawCircle(10, 10, 10, ILI9340_BLACK); 
    }
     PT_END(pt);
-}
+} // blink
+
+//===================== Capture ==================== //
+// Discharges and begins capture
+static PT_THREAD (protothread_capture(struct pt *pt))
+{
+    PT_BEGIN(pt);
+    while(1) {
+	
+    }
+    PT_END(pt);
+} // capture
 
 //===================== Main ======================= //
 void main(void) {
@@ -64,4 +75,4 @@ void main(void) {
 	PT_SCHEDULE(protothread_blink(&pt_blink));
     }
     
-} //end of main
+} //main
