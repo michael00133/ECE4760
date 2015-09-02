@@ -17,7 +17,6 @@
 #include "pt_cornell_TFT.h"
 
 static struct pt pt_blink, pt_capture;
-short capture1 = 0;
 
 //======================= Blink ========================= //
 // Blinks a circle on the screen at a rate of 1 blink per second
@@ -55,15 +54,6 @@ static PT_THREAD (protothread_capture(struct pt *pt))
     PT_END(pt);
 } // capture
 
-//===================== Capture ISR =============== //
-void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
-{
-    capture1 = mIC1ReadCapture();
-
-     // clear the timer interrupt flag
-     mIC1ClearIntFlag();
-}
-
 //===================== Main ======================= //
 void main(void) {
     SYSTEMConfigPerformance(PBCLK);
@@ -86,11 +76,7 @@ void main(void) {
 
     // initialize the comparator
     CMP1Open(CMP_ENABLE | CMP_OUTPUT_ENABLE | CMP1_NEG_INPUT_IVREF);
-
-    // initialize the input capture, uses timer2
-    OpenCapture1( IC_EVERY_RISE_EDGE | IC_INT_1CAPTURE | IC_TIMER2_SRC | IC_ON);
-    ConfigIntCapture1(IC_INT_ON | IC_INT_PRIOR_3 | IC_INT_SUB_PRIOR_3 );
-    INTClearFlag(INT_IC1);
+    CMP1ConfigInit(CMP_INIT_PRIOR_0 | CMP_INIT_ENABLE);
 
     // initialize the input/output I/O
     PPSOutput(1, RPB3, C1INA);		//initially an output
