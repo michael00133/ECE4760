@@ -38,6 +38,8 @@ static PT_THREAD (protothread_blink(struct pt *pt))
 void main(void) {
     SYSTEMConfigPerformance(PBCLK);
 
+    ANSELA = 0; ANSELB = 0; CM1CON = 0; CM2CON = 0;
+
     PT_setup();
     INTEnableSystemMultiVectoredInt();
 
@@ -51,6 +53,12 @@ void main(void) {
 
     tft_setRotation(0); //240x320 vertical display
 
+    // initialize the comparator
+    CMP1Open(CMP_ENABLE | CMP_OUTPUT_ENABLE | CMP1_NEG_INPUT_IVREF);
+
+    // initialize the input/output I/O
+    PPSOutput(1, RPB3, C1INA);		//initially an output
+    PPSOutput(4, RPB9, C1OUT);		//set up output of comparator for debugging
     //round-robin scheduler for threads
     while(1) {
 	PT_SCHEDULE(protothread_blink(&pt_blink));
