@@ -12,8 +12,8 @@
 #include "tft_gfx.h"
 
 // Threading Library
-// config.h sets 40 MHz
-#define SYS_FREQ 40000000
+// config.h sets SYSCLK 64 MHz
+#define SYS_FREQ 64000000
 #include "pt_cornell_TFT.h"
 
 static struct pt pt_blink, pt_capture;
