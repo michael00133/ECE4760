@@ -13,8 +13,8 @@
 
 //extra libraries and defines
 #include <math.h>
-#define R 1100000
-#define TCLK 1000000
+#define R 1100000.0
+#define TCLK 1000000.0
 // Threading Library
 // config.h sets SYSCLK 64 MHz
 #define SYS_FREQ 64000000
@@ -31,7 +31,7 @@ static PT_THREAD (protothread_blink(struct pt *pt))
     while(1) {
 	
 	PT_YIELD_TIME_msec(1000);
-    	tft_drawCircle(10, 10, 10, ILI9340_WHITE);
+    tft_drawCircle(10, 10, 10, ILI9340_WHITE);
 
 	PT_YIELD_TIME_msec(1000);
 	tft_drawCircle(10, 10, 10, ILI9340_BLACK); 
@@ -48,10 +48,18 @@ static PT_THREAD (protothread_capture(struct pt *pt))
     // sets pin 7 to an output
     mPORTBSetPinsDigitalOut(BIT_3);
     mPORTBClearBits(BIT_3);
-    tft_setCursor(20, 50);
-    tft_setTextColor(ILI9340_YELLOW);  tft_setTextSize(4);
+    tft_setCursor(10, 50);
+    tft_setTextColor(ILI9340_YELLOW);  tft_setTextSize(3);
     tft_writeString("Capacitance: ");
+    
+    char buffer[20];
+    tft_setCursor(10, 90);
+    tft_fillRect(10,90, 300, 100, ILI9340_BLACK);
+    sprintf(buffer,"%.2f nF",cap);
+    tft_setTextColor(ILI9340_WHITE);
+    tft_writeString(buffer);
 
+    cap = 0.0;
     PT_YIELD_TIME_msec(1);
     
     //Clear timer and sets pin 7 as input
@@ -67,13 +75,8 @@ static PT_THREAD (protothread_capture(struct pt *pt))
 void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
 {
      capture1 = mIC1ReadCapture();
-     char buffer[20];
-     tft_setCursor(10, 100);
-     tft_fillRect(10,100, 300, 100, ILI9340_BLACK);
-     cap=(capture1/(R*TCLK))/ln(1-1.2/3.3);
-     sprintf(buffer,"%d\n,%f\n", capture1,cap);
-     tft_setTextColor(ILI9340_WHITE);
-     tft_writeString(buffer);
+
+     cap=-1*((float)capture1/(pow(10,-9)*R*TCLK))*pow(log(1-1.2/3.3),-1);
      
      // clear the timer interrupt flag
      mIC1ClearIntFlag();
