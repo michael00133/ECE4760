@@ -11,10 +11,6 @@
 #include "tft_master.h"
 #include "tft_gfx.h"
 
-//extra libraries and defines
-#include <math.h>
-#define R 1100000
-#define TCLK 1000000
 // Threading Library
 // config.h sets SYSCLK 64 MHz
 #define SYS_FREQ 64000000
@@ -70,8 +66,7 @@ void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
      char buffer[20];
      tft_setCursor(10, 100);
      tft_fillRect(10,100, 300, 100, ILI9340_BLACK);
-     cap=(capture1/(R*TCLK))/ln(1-1.2/3.3);
-     sprintf(buffer,"%d\n,%f\n", capture1,cap);
+     sprintf(buffer,"%d\n", capture1);
      tft_setTextColor(ILI9340_WHITE);
      tft_writeString(buffer);
      
