@@ -17,8 +17,8 @@
 #include "pt_cornell_TFT.h"
 
 static struct pt pt_blink, pt_capture;
-short capture1 = 0;
-
+int capture1 = 0;
+float cap = 0.0;
 //======================= Blink ========================= //
 // Blinks a circle on the screen at a rate of 1 blink per second
 static PT_THREAD (protothread_blink(struct pt *pt))
@@ -42,16 +42,19 @@ static PT_THREAD (protothread_capture(struct pt *pt))
     PT_BEGIN(pt);
     while(1) {
     // sets pin 7 to an output
-    PPSOutput(1, RPB3, C1INA);  
+    mPORTBSetPinsDigitalOut(BIT_3);
+    mPORTBClearBits(BIT_3);
+    tft_setCursor(20, 50);
+    tft_setTextColor(ILI9340_YELLOW);  tft_setTextSize(4);
+    tft_writeString("Capacitance: ");
+
     PT_YIELD_TIME_msec(1);
-
-    //begin timer and sets pin 7 as input
-    PPSInput(1, C1INA, RPB3);
-    OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_32, 0xffffffff);
-    capture1 = 0;
-
-    //reset the timer somehow here?
-    CloseTimer2();	
+    
+    //Clear timer and sets pin 7 as input
+    WriteTimer2(0);    
+    mPORTBSetPinsDigitalIn(BIT_3);
+    
+    PT_YIELD_TIME_msec(100);
     }
     PT_END(pt);
 } // capture
@@ -60,6 +63,13 @@ static PT_THREAD (protothread_capture(struct pt *pt))
 void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
 {
      capture1 = mIC1ReadCapture();
+     char buffer[20];
+     tft_setCursor(10, 100);
+     tft_fillRect(10,100, 300, 100, ILI9340_BLACK);
+     sprintf(buffer,"%d\n", capture1);
+     tft_setTextColor(ILI9340_WHITE);
+     tft_writeString(buffer);
+     
      // clear the timer interrupt flag
      mIC1ClearIntFlag();
 }
@@ -73,6 +83,7 @@ void main(void) {
     PT_setup();
     INTEnableSystemMultiVectoredInt();
 
+    
     // initialize the threads
     PT_INIT(&pt_blink);
     PT_INIT(&pt_capture);
@@ -86,16 +97,20 @@ void main(void) {
 
     // initialize the comparator
     CMP1Open(CMP_ENABLE | CMP_OUTPUT_ENABLE | CMP1_NEG_INPUT_IVREF);
+    
+    // initialize the timer2
+    OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_64, 0xffffffff);
 
     // initialize the input capture, uses timer2
-    OpenCapture1( IC_EVERY_RISE_EDGE | IC_INT_1CAPTURE | IC_TIMER2_SRC | IC_ON);
+    OpenCapture1( IC_EVERY_RISE_EDGE | IC_FEDGE_RISE | IC_INT_1CAPTURE | IC_TIMER2_SRC | IC_ON);
     ConfigIntCapture1(IC_INT_ON | IC_INT_PRIOR_3 | IC_INT_SUB_PRIOR_3 );
     INTClearFlag(INT_IC1);
 
     // initialize the input/output I/O
-    PPSOutput(1, RPB3, C1INA);		//initially an output
+    mPORTBSetPinsDigitalOut(BIT_3);
+    mPORTBClearBits(BIT_3);
     PPSOutput(4, RPB9, C1OUT);		//set up output of comparator for debugging
-    PPSInput(3, IC1, RPB2);		//Either Pin 6 or Pin 24 idk
+    PPSInput(3, IC1, RPB13);		//Either Pin 6 or Pin 24 idk
    
     //round-robin scheduler for threads
     while(1) {

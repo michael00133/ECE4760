@@ -1,5 +1,4 @@
-/*
- * File:   config.h
+ /* File:   config.h                               
  * Author: Syed Tahmid Mahbub
  * Modified by: Michael Nguyen
  *
@@ -7,7 +6,7 @@
  */
 
 #ifndef CONFIG_H
-#define	CONFIG_H
+#define CONFIG_H
 
 #include "plib.h"
 // serial stuff
@@ -19,5 +18,5 @@
 #pragma config FPBDIV = DIV_2, FPLLODIV = DIV_1
 #pragma config FWDTEN = OFF, JTAGEN = OFF, FSOSCEN = OFF
 
-#endif	/* CONFIG_H */
+#endif  /* CONFIG_H */
 
