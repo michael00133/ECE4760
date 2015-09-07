@@ -15,6 +15,7 @@
 #include <math.h>
 #define R 1100000.0
 #define TCLK 1000000.0
+#define ERROR 0.2
 // Threading Library
 // config.h sets SYSCLK 64 MHz
 #define SYS_FREQ 64000000
@@ -55,9 +56,14 @@ static PT_THREAD (protothread_capture(struct pt *pt))
     char buffer[20];
     tft_setCursor(10, 90);
     tft_fillRect(10,90, 300, 100, ILI9340_BLACK);
-    sprintf(buffer,"%.2f nF",cap);
+    sprintf(buffer,"%.1f nF",cap);
     tft_setTextColor(ILI9340_WHITE);
-    tft_writeString(buffer);
+    
+    if(cap < 1.0*(1-ERROR))
+        tft_writeString("No capacitor");
+    else
+        tft_writeString(buffer);
+    
 
     cap = 0.0;
     PT_YIELD_TIME_msec(1);
