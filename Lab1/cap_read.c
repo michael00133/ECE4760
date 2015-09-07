@@ -13,16 +13,23 @@
 
 //extra libraries and defines
 #include <math.h>
+
+//Define the chosen resistance, speed of timer2, and maximum error of reading
 #define R 1100000.0
 #define TCLK 1000000.0
 #define ERROR 0.2
+
 // Threading Library
 // config.h sets SYSCLK 64 MHz
 #define SYS_FREQ 64000000
 #include "pt_cornell_TFT.h"
 
 static struct pt pt_blink, pt_capture;
+
+// Number of ticks
 int capture1 = 0;
+
+//Value of the capacitor
 float cap = 0.0;
 //======================= Blink ========================= //
 // Blinks a circle on the screen at a rate of 1 blink per second
@@ -41,7 +48,7 @@ static PT_THREAD (protothread_blink(struct pt *pt))
 } // blink
 
 //===================== Capture ==================== //
-// Discharges and begins measurement of C1INA
+// Discharges capacitor, displays  and begins measurement of C1INA
 static PT_THREAD (protothread_capture(struct pt *pt))
 {
     PT_BEGIN(pt);
@@ -53,12 +60,14 @@ static PT_THREAD (protothread_capture(struct pt *pt))
     tft_setTextColor(ILI9340_YELLOW);  tft_setTextSize(3);
     tft_writeString("Capacitance: ");
     
+    //sets up for the capacitor reading
     char buffer[20];
     tft_setCursor(10, 90);
     tft_fillRect(10,90, 300, 100, ILI9340_BLACK);
     sprintf(buffer,"%.1f nF",cap);
     tft_setTextColor(ILI9340_WHITE);
     
+    //displays the capacitor value if it is above the threshold of 1 nF
     if(cap < 1.0*(1-ERROR))
         tft_writeString("No capacitor");
     else
@@ -81,7 +90,8 @@ static PT_THREAD (protothread_capture(struct pt *pt))
 void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
 {
      capture1 = mIC1ReadCapture();
-
+     
+     //calculates the capacitance
      cap=-1*((float)capture1/(pow(10,-9)*R*TCLK))*pow(log(1-1.2/3.3),-1);
      
      // clear the timer interrupt flag
