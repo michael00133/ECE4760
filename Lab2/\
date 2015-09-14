@@ -1,9 +1,9 @@
 f = 1000;
-fc = 500;
+fc = 300;
 mult = 10;
 axis = (mult*f/2)*(axis-0.5);
 t1 = [0:1/(mult*f):1/(2*fc)];
-t2 = [1/(2*fc):1/(mult*f):5/f];
+t2 = [1/(2*fc):1/(mult*f):2/f];
 L = length(t1) + length(t2);
 
 x1 = cos(2*pi*f*[t1 t2]);

@@ -5,6 +5,8 @@ L = 1000;             % Length of signal
 t = (0:L-1)*T;        % Time vector
 Noise=rand(size(t));
 S=sin(2*pi*1477*t);
+figure
+plot(t,S);
 X=S+Noise;
 Y=fft(X);
 YN=fft(Noise);
