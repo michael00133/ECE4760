@@ -1,6 +1,6 @@
 function [] = mod_lin(f, fs, p)
 fc = 100;
-En = p/f;
+En = p/fc;
 
 t1 = [0:1/(fs):1/(2*fc)];
 t2 = [1/(2*fc):1/fs:En];
