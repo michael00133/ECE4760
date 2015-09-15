@@ -2,24 +2,27 @@ f = 1000;
 
 fc = 100;
 mult = 10;
-axis = (mult*f/2)*(axis-0.5);
+En = 100/f;
+
 t1 = [0:1/(mult*f):1/(2*fc)];
-t2 = [1/(2*fc):1/(mult*f):8/f];
+t2 = [1/(2*fc):1/(mult*f):En];
 L = length(t1) + length(t2);
 
-x1 = cos(2*pi*f*[t1 t2]);
-x2 = [0.5*(1-cos(2*pi*fc*t1)) ones(1,length(t2))];
+[x1, y1] = stairs(cos(2*pi*f*[t1 t2]));
+[x2, y2] = stairs([0.5*(1-cos(2*pi*fc*t1)) ones(1,length(t2))]);
+x1 = (x1/L)*(En);
+x2 = (x2/L)*(En);
 
 figure
-plot([t1 t2],x1, [t1 t2], x2, [t1 t2], x1.*x2);
+plot(x1,y1, x2,y2, x1, y1.*y2);
 legend('Original Wave','Modulator','Modulated Wave');
 xlabel('time(s)');
 ylabel('Amplitude');
 
 figure
-Y = fft(x1.*x2);
-Y1 = fft(x1);
-Y2 = fft(x2);
+Y = fft(y1.*y2);
+Y1 = fft(y1);
+Y2 = fft(y2);
 P2 = abs(Y/L);
 P21 = abs(Y1/L);
 P22 = abs(Y2/L);
@@ -34,3 +37,4 @@ plot(axis,20*log10(P1),axis,20*log10(P11),axis,20*log10(P12));
 legend('Modulated Wave', 'Original Wave', 'Modulator');
 ylabel('power(dB)');
 xlabel('frequency(Hz)');
+
