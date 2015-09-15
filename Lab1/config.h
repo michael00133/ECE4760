@@ -15,7 +15,7 @@
 // sets SYSCLK to 64MHz
 #pragma config FNOSC = FRCPLL, POSCMOD = HS
 #pragma config FPLLIDIV = DIV_2, FPLLMUL = MUL_16
-#pragma config FPBDIV = DIV_2, FPLLODIV = DIV_1
+#pragma config FPBDIV = DIV_1, FPLLODIV = DIV_1
 #pragma config FWDTEN = OFF, JTAGEN = OFF, FSOSCEN = OFF
 
 #endif  /* CONFIG_H */

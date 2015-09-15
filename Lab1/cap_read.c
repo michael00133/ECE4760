@@ -87,12 +87,11 @@ static PT_THREAD (protothread_capture(struct pt *pt))
 } // capture
 
 //===================== Capture ISR =============== //
-void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
-{
+void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void) {
      capture1 = mIC1ReadCapture();
      
      //calculates the capacitance
-     cap=-1*((float)capture1/(pow(10,-9)*R*TCLK))*pow(log(1-1.2/3.3),-1);
+     cap=-1*((float)capture1/(pow(10,-9)*R*TCLK))*pow(log(1-1.2/3.24),-1);
      
      // clear the timer interrupt flag
      mIC1ClearIntFlag();
@@ -100,7 +99,7 @@ void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void)
 
 //===================== Main ======================= //
 void main(void) {
-    SYSTEMConfigPerformance(PBCLK);
+    SYSTEMConfig( SYS_FREQ,  SYS_CFG_WAIT_STATES | SYS_CFG_PCACHE);
 
     ANSELA = 0; ANSELB = 0; CM1CON = 0; CM2CON = 0;
 

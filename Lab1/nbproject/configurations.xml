@@ -152,6 +152,9 @@
         <property key="save-temps" value="false"/>
         <property key="wpo-lto" value="false"/>
       </C32Global>
+      <PKOBSKDEPlatformTool>
+        <property key="firmware.download.all" value="false"/>
+      </PKOBSKDEPlatformTool>
     </conf>
   </confs>
 </configurationDescriptor>
