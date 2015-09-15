@@ -1,6 +1,6 @@
 f = 1000;
 fc = 300;
-mult = 2;
+mult = 10;
 t1 = [0:1/(mult*f):1/(2*fc)];
 t2 = [1/(2*fc):1/(mult*f):2/f];
 L = length(t1) + length(t2);
