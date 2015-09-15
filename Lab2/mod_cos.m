@@ -1,5 +1,5 @@
-f = 697;
-fs = 100000;
+f = 1000;
+fs = 6000;
 fc = 100;
 En = 100/f;
 
@@ -19,6 +19,7 @@ xlabel('time(s)');
 ylabel('Amplitude');
 
 figure
+L = length(y1)/2;
 Y = fft(y1.*y2);
 Y1 = fft(y1);
 Y2 = fft(y2);
