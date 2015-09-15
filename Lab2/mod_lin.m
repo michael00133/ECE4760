@@ -1,12 +1,13 @@
 f = 1000;
-fc = 300;
+fc = 100;
 mult = 10;
+axis = (mult*f/2)*(axis-0.5);
 t1 = [0:1/(mult*f):1/(2*fc)];
-t2 = [1/(2*fc):1/(mult*f):2/f];
+t2 = [1/(2*fc):1/(mult*f):8/f];
 L = length(t1) + length(t2);
 
 x1 = cos(2*pi*f*[t1 t2]);
-x2 = [0.5*(1-cos(2*pi*fc*t1)) ones(1,length(t2))];
+x2 = [2*fc*t1 ones(1,length(t2))];
 
 figure
 plot([t1 t2],x1, [t1 t2], x2, [t1 t2], x1.*x2);

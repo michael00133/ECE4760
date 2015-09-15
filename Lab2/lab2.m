@@ -8,11 +8,16 @@ Fs = 1000*i;            % Sampling frequency
 T = 1/Fs;             % Sampling period
 t=(0:L-1)*T;
 S=sin(2*pi*1477*t);
+<<<<<<< HEAD
 Noise=0.5*rand(size(t));
 
 
 %plot(t,S)
 
+=======
+figure
+plot(t,S);
+>>>>>>> 5bed4401f28f46fc902ce479daf7b1b478527b62
 X=S+Noise;
 Y=fft(S);
 YN=fft(Noise);
@@ -32,5 +37,9 @@ title('Single-Sided Amplitude Spectrum of X(t)')
 xlabel('f (Hz)')
 ylabel('|P1(f)|')
 
+<<<<<<< HEAD
 
 %SNR=max(20*log10(P1))+mean(20*log10(P3))
+=======
+SNR=max(20*log10(P1))+mean(20*log10(P3))
+>>>>>>> 5bed4401f28f46fc902ce479daf7b1b478527b62
