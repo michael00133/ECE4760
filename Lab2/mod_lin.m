@@ -1,7 +1,6 @@
-f = 697;
-fs = 100000;
+function [] = mod_lin(f, fs, p)
 fc = 100;
-En = 100/f;
+En = p/f;
 
 t1 = [0:1/(fs):1/(2*fc)];
 t2 = [1/(2*fc):1/fs:En];
@@ -32,7 +31,7 @@ P1(2:end-1) = 2*P1(2:end-1);
 P11(2:end-1) = 2*P11(2:end-1);
 P12(2:end-1) = 2*P12(2:end-1);
 axis = fs*(0:(L/2))/L;
-plot(axis,20*log10(P1),axis,20*log10(P11),axis,20*log10(P12));
+plot(axis,20*log10(P1),axis,20*log10(P11),axis,20*log10(P12),[0,max(axis)],[-20, -20]);
 legend('Modulated Wave', 'Original Wave', 'Modulator');
 ylabel('power(dB)');
 xlabel('frequency(Hz)');
