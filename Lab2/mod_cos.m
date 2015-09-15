@@ -7,7 +7,7 @@ t2 = [1/(2*fc):1/fs:En];
 L = length(t1) + length(t2);
 
 [x1, y1] = stairs(cos(2*pi*f*[t1 t2]));
-[x2, y2] = stairs([cos(2*pi*fc*t1) ones(1,length(t2))]);
+[x2, y2] = stairs([.5*(1-cos(2*pi*fc*t1)) ones(1,length(t2))]);
 x1 = (x1/L)*(En);
 x2 = (x2/L)*(En);
 
