@@ -1,11 +1,11 @@
 clear
 close all
-L = 10;             % Length of signal
+L = 1000;             % Length of signal
+legendinfo={};
 
-hold all
 
-for i=6:10
-Fs = 1500*i;            % Sampling frequency
+for i=3:6
+Fs = 1000*i;            % Sampling frequency
 T = 1/Fs;             % Sampling period
 t=(0:L-1)*T;
 [St,S]=stairs(t,sin(2*pi*1477*t));
@@ -26,14 +26,16 @@ P1(2:end-1) = 2*P1(2:end-1);
 P4 = abs(YN/L);
 P3 = P4(1:L/2+1);
 P3(2:end-1) = 2*P3(2:end-1);
-f = Fs*(0:(L/2))/L;
+f = 2*Fs*(0:(L/2))/L;
 figure(1)
-plot(f,20*log10(P1))
-figure
 plot(St,S);
-legendinfo{i}=num2str(i);
+hold all
+figure(2)
+plot(f,20*log10(P1))
+legendinfo=[legendinfo num2str(1000*i)];
+hold all
 end
-figure(1)
+
 legend(legendinfo)
 % figure
 % plot(f,20*log10(P3))
