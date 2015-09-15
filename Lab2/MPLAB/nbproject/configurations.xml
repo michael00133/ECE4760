@@ -4,14 +4,10 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>../Lab1.X/Adafruit_GFX.h</itemPath>
-      <itemPath>../Lab1.X/config.h</itemPath>
-      <itemPath>../Lab1.X/lc-switch.h</itemPath>
-      <itemPath>../Lab1.X/lc.h</itemPath>
-      <itemPath>../Lab1.X/pt_cornell.h</itemPath>
-      <itemPath>../Lab1.X/pt_cornell_TFT.h</itemPath>
-      <itemPath>../Lab1.X/tft_gfx.h</itemPath>
-      <itemPath>../Lab1.X/tft_master.h</itemPath>
+      <itemPath>tft_master.h</itemPath>
+      <itemPath>tft_gfx.h</itemPath>
+      <itemPath>config.h</itemPath>
+      <itemPath>pt_cornell_TFT.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -20,9 +16,9 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>../Lab1.X/glcdfont.c</itemPath>
-      <itemPath>../Lab1.X/tft_gfx.c</itemPath>
-      <itemPath>../Lab1.X/tft_master.c</itemPath>
+      <itemPath>tft_master.c</itemPath>
+      <itemPath>tft_gfx.c</itemPath>
+      <itemPath>glcdfont.c</itemPath>
       <itemPath>dtmf.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
@@ -31,9 +27,6 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
   </logicalFolder>
-  <sourceRootList>
-    <Elem>../Lab1.X</Elem>
-  </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="default" type="2">
@@ -81,7 +74,7 @@
         <property key="generate-micro-compressed-code" value="false"/>
         <property key="isolate-each-function" value="false"/>
         <property key="make-warnings-into-errors" value="false"/>
-        <property key="optimization-level" value=""/>
+        <property key="optimization-level" value="-O1"/>
         <property key="place-data-into-section" value="false"/>
         <property key="post-instruction-scheduling" value="default"/>
         <property key="pre-instruction-scheduling" value="default"/>
@@ -92,6 +85,9 @@
         <property key="use-iar" value="false"/>
         <property key="use-indirect-calls" value="false"/>
       </C32>
+      <C32-AR>
+        <property key="additional-options-chop-files" value="false"/>
+      </C32-AR>
       <C32-LD>
         <property key="additional-options-use-response-files" value="false"/>
         <property key="enable-check-sections" value="false"/>
@@ -157,6 +153,30 @@
         <property key="save-temps" value="false"/>
         <property key="wpo-lto" value="false"/>
       </C32Global>
+      <PKOBSKDEPlatformTool>
+        <property key="AutoSelectMemRanges" value="auto"/>
+        <property key="SecureSegment.SegmentProgramming" value="FullChipProgramming"/>
+        <property key="ToolFirmwareFilePath"
+                  value="Press to browse for a specific firmware version"/>
+        <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
+        <property key="memories.configurationmemory" value="true"/>
+        <property key="memories.dataflash" value="true"/>
+        <property key="memories.eeprom" value="true"/>
+        <property key="memories.id" value="true"/>
+        <property key="memories.programmemory" value="true"/>
+        <property key="memories.programmemory.end" value="0x1d01ffff"/>
+        <property key="memories.programmemory.start" value="0x1d000000"/>
+        <property key="memories.userotp" value="true"/>
+        <property key="programoptions.donoteraseauxmem" value="false"/>
+        <property key="programoptions.eraseb4program" value="true"/>
+        <property key="programoptions.preservedataflash" value="false"/>
+        <property key="programoptions.preserveeeprom" value="false"/>
+        <property key="programoptions.preserveprogramrange" value="false"/>
+        <property key="programoptions.preserveprogramrange.end" value="0x1d0001ff"/>
+        <property key="programoptions.preserveprogramrange.start" value="0x1d000000"/>
+        <property key="programoptions.usehighvoltageonmclr" value="false"/>
+        <property key="programoptions.uselvpprogramming" value="false"/>
+      </PKOBSKDEPlatformTool>
     </conf>
   </confs>
 </configurationDescriptor>

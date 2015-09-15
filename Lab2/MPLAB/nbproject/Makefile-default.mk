@@ -45,17 +45,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=../Lab1.X/glcdfont.c ../Lab1.X/tft_gfx.c ../Lab1.X/tft_master.c dtmf.c
+SOURCEFILES_QUOTED_IF_SPACED=tft_master.c tft_gfx.c glcdfont.c dtmf.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/_ext/1942264707/glcdfont.o ${OBJECTDIR}/_ext/1942264707/tft_gfx.o ${OBJECTDIR}/_ext/1942264707/tft_master.o ${OBJECTDIR}/dtmf.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/_ext/1942264707/glcdfont.o.d ${OBJECTDIR}/_ext/1942264707/tft_gfx.o.d ${OBJECTDIR}/_ext/1942264707/tft_master.o.d ${OBJECTDIR}/dtmf.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/dtmf.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/tft_master.o.d ${OBJECTDIR}/tft_gfx.o.d ${OBJECTDIR}/glcdfont.o.d ${OBJECTDIR}/dtmf.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/_ext/1942264707/glcdfont.o ${OBJECTDIR}/_ext/1942264707/tft_gfx.o ${OBJECTDIR}/_ext/1942264707/tft_master.o ${OBJECTDIR}/dtmf.o
+OBJECTFILES=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/dtmf.o
 
 # Source Files
-SOURCEFILES=../Lab1.X/glcdfont.c ../Lab1.X/tft_gfx.c ../Lab1.X/tft_master.c dtmf.c
+SOURCEFILES=tft_master.c tft_gfx.c glcdfont.c dtmf.c
 
 
 CFLAGS=
@@ -94,54 +94,54 @@ endif
 # ------------------------------------------------------------------------------------
 # Rules for buildStep: compile
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
-${OBJECTDIR}/_ext/1942264707/glcdfont.o: ../Lab1.X/glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}/_ext/1942264707" 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/glcdfont.o.d 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/glcdfont.o 
-	@${FIXDEPS} "${OBJECTDIR}/_ext/1942264707/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/_ext/1942264707/glcdfont.o.d" -o ${OBJECTDIR}/_ext/1942264707/glcdfont.o ../Lab1.X/glcdfont.c   
+${OBJECTDIR}/tft_master.o: tft_master.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/tft_master.o.d 
+	@${RM} ${OBJECTDIR}/tft_master.o 
+	@${FIXDEPS} "${OBJECTDIR}/tft_master.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/tft_master.o.d" -o ${OBJECTDIR}/tft_master.o tft_master.c   
 	
-${OBJECTDIR}/_ext/1942264707/tft_gfx.o: ../Lab1.X/tft_gfx.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}/_ext/1942264707" 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_gfx.o.d 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_gfx.o 
-	@${FIXDEPS} "${OBJECTDIR}/_ext/1942264707/tft_gfx.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/_ext/1942264707/tft_gfx.o.d" -o ${OBJECTDIR}/_ext/1942264707/tft_gfx.o ../Lab1.X/tft_gfx.c   
+${OBJECTDIR}/tft_gfx.o: tft_gfx.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/tft_gfx.o.d 
+	@${RM} ${OBJECTDIR}/tft_gfx.o 
+	@${FIXDEPS} "${OBJECTDIR}/tft_gfx.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/tft_gfx.o.d" -o ${OBJECTDIR}/tft_gfx.o tft_gfx.c   
 	
-${OBJECTDIR}/_ext/1942264707/tft_master.o: ../Lab1.X/tft_master.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}/_ext/1942264707" 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_master.o.d 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_master.o 
-	@${FIXDEPS} "${OBJECTDIR}/_ext/1942264707/tft_master.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/_ext/1942264707/tft_master.o.d" -o ${OBJECTDIR}/_ext/1942264707/tft_master.o ../Lab1.X/tft_master.c   
+${OBJECTDIR}/glcdfont.o: glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/glcdfont.o.d 
+	@${RM} ${OBJECTDIR}/glcdfont.o 
+	@${FIXDEPS} "${OBJECTDIR}/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/glcdfont.o.d" -o ${OBJECTDIR}/glcdfont.o glcdfont.c   
 	
 ${OBJECTDIR}/dtmf.o: dtmf.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/dtmf.o.d 
 	@${RM} ${OBJECTDIR}/dtmf.o 
-	@${FIXDEPS} "${OBJECTDIR}/dtmf.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dtmf.o.d" -o ${OBJECTDIR}/dtmf.o dtmf.c   
+	@${FIXDEPS} "${OBJECTDIR}/dtmf.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/dtmf.o.d" -o ${OBJECTDIR}/dtmf.o dtmf.c   
 	
 else
-${OBJECTDIR}/_ext/1942264707/glcdfont.o: ../Lab1.X/glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}/_ext/1942264707" 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/glcdfont.o.d 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/glcdfont.o 
-	@${FIXDEPS} "${OBJECTDIR}/_ext/1942264707/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/_ext/1942264707/glcdfont.o.d" -o ${OBJECTDIR}/_ext/1942264707/glcdfont.o ../Lab1.X/glcdfont.c   
+${OBJECTDIR}/tft_master.o: tft_master.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/tft_master.o.d 
+	@${RM} ${OBJECTDIR}/tft_master.o 
+	@${FIXDEPS} "${OBJECTDIR}/tft_master.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/tft_master.o.d" -o ${OBJECTDIR}/tft_master.o tft_master.c   
 	
-${OBJECTDIR}/_ext/1942264707/tft_gfx.o: ../Lab1.X/tft_gfx.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}/_ext/1942264707" 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_gfx.o.d 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_gfx.o 
-	@${FIXDEPS} "${OBJECTDIR}/_ext/1942264707/tft_gfx.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/_ext/1942264707/tft_gfx.o.d" -o ${OBJECTDIR}/_ext/1942264707/tft_gfx.o ../Lab1.X/tft_gfx.c   
+${OBJECTDIR}/tft_gfx.o: tft_gfx.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/tft_gfx.o.d 
+	@${RM} ${OBJECTDIR}/tft_gfx.o 
+	@${FIXDEPS} "${OBJECTDIR}/tft_gfx.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/tft_gfx.o.d" -o ${OBJECTDIR}/tft_gfx.o tft_gfx.c   
 	
-${OBJECTDIR}/_ext/1942264707/tft_master.o: ../Lab1.X/tft_master.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}/_ext/1942264707" 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_master.o.d 
-	@${RM} ${OBJECTDIR}/_ext/1942264707/tft_master.o 
-	@${FIXDEPS} "${OBJECTDIR}/_ext/1942264707/tft_master.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/_ext/1942264707/tft_master.o.d" -o ${OBJECTDIR}/_ext/1942264707/tft_master.o ../Lab1.X/tft_master.c   
+${OBJECTDIR}/glcdfont.o: glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/glcdfont.o.d 
+	@${RM} ${OBJECTDIR}/glcdfont.o 
+	@${FIXDEPS} "${OBJECTDIR}/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/glcdfont.o.d" -o ${OBJECTDIR}/glcdfont.o glcdfont.c   
 	
 ${OBJECTDIR}/dtmf.o: dtmf.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/dtmf.o.d 
 	@${RM} ${OBJECTDIR}/dtmf.o 
-	@${FIXDEPS} "${OBJECTDIR}/dtmf.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/dtmf.o.d" -o ${OBJECTDIR}/dtmf.o dtmf.c   
+	@${FIXDEPS} "${OBJECTDIR}/dtmf.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -O1 -MMD -MF "${OBJECTDIR}/dtmf.o.d" -o ${OBJECTDIR}/dtmf.o dtmf.c   
 	
 endif
 
