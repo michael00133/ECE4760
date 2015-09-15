@@ -12,6 +12,8 @@ x2 = [2*fc*t1 ones(1,length(t2))];
 figure
 plot([t1 t2],x1, [t1 t2], x2, [t1 t2], x1.*x2);
 legend('Original Wave','Modulator','Modulated Wave');
+xlabel('time(s)');
+ylabel('Amplitude');
 
 figure
 Y = fft(x1.*x2);
@@ -27,5 +29,8 @@ P1(2:end-1) = 2*P1(2:end-1);
 P11(2:end-1) = 2*P11(2:end-1);
 P12(2:end-1) = 2*P12(2:end-1);
 axis = mult*f*(0:(L/2))/L;
-plot(axis,P1,axis,P11,axis,P12);
+plot(axis,20*log10(P1),axis,20*log10(P11),axis,20*log10(P12));
 legend('Modulated Wave', 'Original Wave', 'Modulator');
+ylabel('power(dB)');
+xlabel('frequency(Hz)');
+

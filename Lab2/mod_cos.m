@@ -1,12 +1,8 @@
 f = 1000;
-<<<<<<< HEAD:Lab2/modulate.m
-fc = 300;
-mult = 10;
-=======
+
 fc = 100;
 mult = 10;
 axis = (mult*f/2)*(axis-0.5);
->>>>>>> 5bed4401f28f46fc902ce479daf7b1b478527b62:Lab2/mod_cos.m
 t1 = [0:1/(mult*f):1/(2*fc)];
 t2 = [1/(2*fc):1/(mult*f):8/f];
 L = length(t1) + length(t2);
@@ -17,6 +13,8 @@ x2 = [0.5*(1-cos(2*pi*fc*t1)) ones(1,length(t2))];
 figure
 plot([t1 t2],x1, [t1 t2], x2, [t1 t2], x1.*x2);
 legend('Original Wave','Modulator','Modulated Wave');
+xlabel('time(s)');
+ylabel('Amplitude');
 
 figure
 Y = fft(x1.*x2);
@@ -32,5 +30,7 @@ P1(2:end-1) = 2*P1(2:end-1);
 P11(2:end-1) = 2*P11(2:end-1);
 P12(2:end-1) = 2*P12(2:end-1);
 axis = mult*f*(0:(L/2))/L;
-plot(axis,P1,axis,P11,axis,P12);
+plot(axis,20*log10(P1),axis,20*log10(P11),axis,20*log10(P12));
 legend('Modulated Wave', 'Original Wave', 'Modulator');
+ylabel('power(dB)');
+xlabel('frequency(Hz)');
