@@ -1,15 +1,14 @@
-f = 1000;
-
+f = 697;
+fs = 100000;
 fc = 100;
-mult = 10;
 En = 100/f;
 
-t1 = [0:1/(mult*f):1/(2*fc)];
-t2 = [1/(2*fc):1/(mult*f):En];
+t1 = [0:1/(fs):1/(2*fc)];
+t2 = [1/(2*fc):1/fs:En];
 L = length(t1) + length(t2);
 
 [x1, y1] = stairs(cos(2*pi*f*[t1 t2]));
-[x2, y2] = stairs([0.5*(1-cos(2*pi*fc*t1)) ones(1,length(t2))]);
+[x2, y2] = stairs([cos(2*pi*fc*t1) ones(1,length(t2))]);
 x1 = (x1/L)*(En);
 x2 = (x2/L)*(En);
 
@@ -32,7 +31,7 @@ P12 = P22(1:L/2+1);
 P1(2:end-1) = 2*P1(2:end-1);
 P11(2:end-1) = 2*P11(2:end-1);
 P12(2:end-1) = 2*P12(2:end-1);
-axis = mult*f*(0:(L/2))/L;
+axis = fs*(0:(L/2))/L;
 plot(axis,20*log10(P1),axis,20*log10(P11),axis,20*log10(P12));
 legend('Modulated Wave', 'Original Wave', 'Modulator');
 ylabel('power(dB)');
