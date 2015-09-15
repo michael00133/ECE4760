@@ -1,9 +1,10 @@
-
+clear
 close all
-L = 500;             % Length of signal
-pcolors={
-hold all
-for i=1:0.5:4
+L = 1000;             % Length of signal
+legendinfo={};
+
+
+for i=3:6
 Fs = 1000*i;            % Sampling frequency
 T = 1/Fs;             % Sampling period
 t=(0:L-1)*T;
@@ -26,14 +27,20 @@ P4 = abs(YN/L);
 P3 = P4(1:L/2+1);
 P3(2:end-1) = 2*P3(2:end-1);
 f = Fs*(0:(L/2))/L;
+figure(1)
+plot(St,S);
+hold all
+figure(2)
 plot(f,20*log10(P1))
-legendinfo{i}=num2str(i);
+legendinfo=[legendinfo num2str(1000*i)];
+hold all
 end
-legend(legen
-figure
-plot(f,20*log10(P3))
-title('Single-Sided Amplitude Spectrum of X(t)')
-xlabel('f (Hz)')
-ylabel('|P1(f)|')
+
+legend(legendinfo)
+% figure
+% plot(f,20*log10(P3))
+% title('Single-Sided Amplitude Spectrum of X(t)')
+% xlabel('f (Hz)')
+% ylabel('|P1(f)|')
 
 %SNR=max(20*log10(P1))+mean(20*log10(P3))
