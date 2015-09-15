@@ -1,6 +1,6 @@
 
 close all
-L = 100;             % Length of signal
+L = 500;             % Length of signal
 
 hold all
 for i=1:0.5:4
@@ -16,6 +16,7 @@ Noise=0.5*rand(size(t));
 X=S+Noise;
 Y=fft(S);
 YN=fft(Noise);
+%plot(t,S)
 P2 = abs(Y/L);
 P1 = P2(1:L/2+1);
 P1(2:end-1) = 2*P1(2:end-1);
