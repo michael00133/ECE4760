@@ -1,13 +1,12 @@
 clear
 close all
-L = 1000;             % Length of signal
 legendinfo={};
 
 
-for i=3:6
+for i=5:20
 Fs = 1000*i;            % Sampling frequency
 T = 1/Fs;             % Sampling period
-t=(0:L-1)*T;
+t=(0:T:1/1477);
 [St,S]=stairs(t,sin(2*pi*1477*t));
 
 Noise=0.5*rand(size(St));
@@ -37,6 +36,7 @@ hold all
 end
 
 legend(legendinfo)
+
 % figure
 % plot(f,20*log10(P3))
 % title('Single-Sided Amplitude Spectrum of X(t)')
