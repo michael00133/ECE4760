@@ -28,19 +28,25 @@ volatile int spiClkDiv = 2 ; // 20 MHz max speed for this DAC
 char buffer[60];
 
 //stores 12 digits
-volatile char storage[12];
-volatile int temp;
+volatile int storage[12];
+volatile int dds_state;
+volatile int recent;
 volatile int num;
+volatile int repeat;
+volatile double ramp;
+volatile int downup;
 
 //look up table for sinusoid
-uint8_t table [256];
+uint16_t table [256];
 
 // Debouncing State
 volatile int state = 0;   
 
 // Timer Periods and table look up indices
-volatile int f1, f2, ind1, ind2;
+volatile int f1, f2, inc1, inc2;
+volatile uint32_t ind1, ind2;
 int fs = 10000;
+int inc_const;
 //======================= Blink ========================= //
 // Blinks a circle on the screen at a rate of 1 blink per second
 static PT_THREAD (protothread_blink(struct pt *pt))
@@ -107,22 +113,18 @@ static PT_THREAD (protothread_keyboard(struct pt *pt))
         tft_setCursor(5, 200);
         tft_setTextColor(ILI9340_YELLOW); tft_setTextSize(2);
         if(i > -1 && i < 10) {
-            sprintf(buffer,"Number Pressed: %d", i);
-            temp = i;
+            sprintf(buffer,"Num: %d, %d, %d", i, num, dds_state);
         }
         else {
             sprintf(buffer,"No Button Pressed");
-            temp = -1;
         }
         if (i==10) {
             sprintf(buffer,"*");
-            temp = i;
         }
         if (i==11) { 
             sprintf(buffer,"#");
-            temp = i;
         }
-        
+        recent = i;
         tft_writeString(buffer);
 
         // NEVER exit while
@@ -136,30 +138,93 @@ static PT_THREAD (protothread_dds(struct pt *pt))
 {
     PT_BEGIN(pt);
     while (1) {
-         PT_YIELD_TIME_msec(65);
-         if(temp == -1 && state == 0) {
-             f1 = f2 = 0;
-         }
-         else if(temp != -1) {
-             if(temp == 3 || temp == 6 || temp == 9 || temp == 11)
+         PT_YIELD_TIME_msec(30);
+         if(recent != -1 && f1 == 0 && f2 == 0) {
+             
+             if(recent == 3 || recent == 6 || recent == 9 || recent == 11)
                  f1 = 1477;
-             else if(temp == 2 || temp ==  5 || temp == 8 || temp == 0)
+             else if(recent == 2 || recent ==  5 || recent == 8 || recent == 0)
                  f1 = 1336;
-             else if(temp == 1 || temp == 4 || temp == 7 || temp == 10)
+             else if(recent == 1 || recent == 4 || recent == 7 || recent == 10)
                  f1 = 1209;
-             else
-                 f1 = 2000;
              
-             if(temp == 1 || temp == 2 || temp == 3)
+             if(recent == 1 || recent == 2 || recent == 3)
                  f2 = 697;
-             else if(temp == 4 || temp == 5 || temp == 6)
+             else if(recent == 4 || recent == 5 || recent == 6)
                  f2 = 770;
-             else if(temp == 7 || temp == 8 || temp == 9)
+             else if(recent == 7 || recent == 8 || recent == 9)
                  f2 = 852;
-             else if(temp == 10 || temp == 0 || temp == 11)
+             else if(recent == 10 || recent == 0 || recent == 11)
                  f2 = 941;
+
              
-             ind1 = 0; ind2 = 0;
+             inc1 = f1 * inc_const;
+             inc2 = f2 * inc_const;
+             
+             if (recent == 10)
+                 dds_state = 1;
+             else if (recent == 11){
+                 dds_state = 2;
+                 repeat = 0;
+             }
+             
+             if (num < 11 && recent != 11 && recent != 10) {
+                num ++;
+                storage[num] = recent;
+             }
+             PT_YIELD_TIME_msec(5);
+             //signal to ramp
+             downup = 1;
+             ramp = 0;
+         }
+         else if (state == 0 && dds_state == 1) {
+             num = -1;
+             dds_state = 0;
+         }
+         else if (state == 0 && dds_state == 2) {
+             //signal to decay
+             downup = -1;
+             ramp = 1;
+             PT_YIELD_TIME_msec(5);
+             f1 = 0; f2 = 0;
+             PT_YIELD_TIME_msec(65);
+             if(repeat <= num && num != -1) {
+                if(storage[repeat] == 3 || storage[repeat] == 6 || storage[repeat] == 9 || storage[repeat] == 11)
+                    f1 = 1477;
+                else if(storage[repeat] == 2 || storage[repeat] ==  5 || storage[repeat] == 8 || storage[repeat] == 0)
+                    f1 = 1336;
+                else if(storage[repeat] == 1 || storage[repeat] == 4 || storage[repeat] == 7 || storage[repeat] == 10)
+                    f1 = 1209;
+
+                if(storage[repeat] == 1 || storage[repeat] == 2 || storage[repeat] == 3)
+                    f2 = 697;
+                else if(storage[repeat] == 4 || storage[repeat] == 5 || storage[repeat] == 6)
+                    f2 = 770;
+                else if(storage[repeat] == 7 || storage[repeat] == 8 || storage[repeat] == 9)
+                    f2 = 852;
+                else if(storage[repeat] == 10 || storage[repeat] == 0 || storage[repeat] == 11)
+                    f2 = 941;
+                
+                 inc1 = f1 * inc_const;
+                 inc2 = f2 * inc_const;
+                 repeat++;
+             PT_YIELD_TIME_msec(5);
+             //signal to ramp
+             downup = 1;
+             ramp = 0;
+             }
+             else {
+                 num = -1;
+                 dds_state = 0;
+             }
+             PT_YIELD_TIME_msec(80);
+         }
+         else if(recent == -1 && state == 0) {
+             //signal to decay
+             downup = -1;
+             ramp = 1;
+             PT_YIELD_TIME_msec(5);
+             f1 = f2 = 0;
          }
     }
     PT_END(pt);
@@ -170,13 +235,27 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
     mT3ClearIntFlag();
     // generate  ramp
     if (f1 != 0 || f2 != 0) {
-        DAC_data = 0.5*(table[ind1] + table[ind2]); // for testing
-        ind1 = (ind1 + (256*f1)/fs)%256;
-        ind2 = (ind2 + (256*f2)/fs)%256;
+        uint8_t t1, t2;
+        t1 = (ind1>>24);
+        t2 = (ind2>>24);
+        DAC_data = (int)(ramp*0.5*(table[t1] + table[t2])); // for testing
+        ind1 += inc1;
+        ind2 += inc2;
+    
     }
     else {
-        DAC_data = 0.8*DAC_data;
+        DAC_data = 0.99*DAC_data;
     }
+    
+    if(ramp < 1 && downup == 1)
+        ramp += 200.0/((double)fs);
+    else if(ramp > 0 && downup == -1)
+        ramp -= 200.0/((double)fs);
+    else if(downup == 1)
+        ramp = 1;
+    else
+        ramp = 0;
+    
     // CS low to start transaction
      mPORTBClearBits(BIT_4); // start transaction
     // test for ready
@@ -198,13 +277,14 @@ void main(void) {
     // initialize timer periods as zero
     f1 = 0; f2 = 0;
     ind1 = 0; ind2 = 0;
-    temp = NULL;
-    
-    num = 0;
+    recent = -1;
+    inc_const = (256*pow(2,24))/fs;
+    num = -1;
+    downup = 0;
     
     int i;
     for(i = 0; i < 256; i++) {
-        table[i] = (uint8_t)pow(2,8)*0.5*(1.0+cos(2*3.14159 * ((double)i/256.0)));
+        table[i] = (uint16_t)pow(2,11)*(1.0+cos(2*3.14159 * ((double)i/256.0)));
     }
 
     PT_setup();
@@ -285,3 +365,23 @@ int debounce(int s, int keypad) {
         }
             return s;
 }
+
+/*int* calc_f(int t) {
+    int f_calc [2];
+             if(t == 3 || t == 6 || t == 9 || t == 11)
+                 f_calc[0] = 1477;
+             else if(t == 2 || t ==  5 || t == 8 || t == 0)
+                 f_calc[0] = 1336;
+             else if(t == 1 || t == 4 || t == 7 || t == 10)
+                 f_calc[0] = 1209;
+             
+             if(t == 1 || t == 2 || t == 3)
+                 f_calc[1] = 697;
+             else if(t == 4 || t == 5 || t == 6)
+                 f_calc[1] = 770;
+             else if(t == 7 || t == 8 || t == 9)
+                 f_calc[1] = 852;
+             else if(t == 10 || t == 0 || t == 11)
+                 f_calc[1] = 941;
+             return f_calc;
+}*/
