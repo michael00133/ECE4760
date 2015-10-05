@@ -92,7 +92,7 @@ static PT_THREAD (protothread_calculate (struct pt *pt))
                 if(ti != tj && ti->delay + tj->delay == 0 && mag_rij < 4*pow(ballradius,2)) {
                     signed short vij_x = ti->xvel - tj->xvel;
                     signed short vij_y = ti->yvel - tj->yvel;
-                    signed short temp = pow(2*pow(ballradius,2),2);
+                    signed short temp = pow(2*ballradius,2);
                     signed short deltaVi_x = -1*(rij_x * (rij_x * vij_x+ rij_y*vij_y))/temp;
                     signed short deltaVi_y = -1*(rij_y * (rij_x * vij_x+ rij_y*vij_y))/temp;
                     
