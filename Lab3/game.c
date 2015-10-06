@@ -35,11 +35,24 @@ static struct pt pt_calculate, pt_refresh;
 char buffer[60];
 struct Ball *head;
 //signed short max_velocity = 20;
-uint8_t drag = 1000;
-uint8_t scale = 1000;
-uint8_t ballradius = 3;
+int drag = 1000;
+int scale = 1000;
+uint8_t ballradius = 2;
 uint8_t delay_master = 10;
+
+uint8_t paddle_length = 30;
+uint8_t paddle_ypos = 100;
+uint8_t paddle_xpos = 6;
 uint8_t refreshRate;
+uint8_t frames = 0;
+
+uint8_t numBalls = 0;
+uint8_t maxBalls = 50;
+uint8_t ballgen = 0;
+
+int score = 0;
+// system 1 second interval tick
+int timeElapsed ;
 //============== Create a ball ================//
 struct Ball *Ball_create(int xp, int yp, int xv, int yv,  uint8_t d, Ball *bb) {
     
@@ -58,17 +71,33 @@ struct Ball *Ball_create(int xp, int yp, int xv, int yv,  uint8_t d, Ball *bb) {
 }
 
 //======================= Refresh ========================= //
+//Does Ball calculations and Draws the necessary elements on the screen 
 static PT_THREAD (protothread_refresh(struct pt *pt))
 {
     PT_BEGIN(pt);
+    PT_YIELD_TIME_msec(100);
+    //waits for the scoreboard to be set up
     while(1) {
         PT_YIELD_TIME_msec(10);
         
+        //Generates a new ball at a given interval
+        if(ballgen >= 40) {
+            int troll1 = -(rand() % 2)-1;
+            int troll2 = (rand() % 6) - 3;
+            struct Ball *temp = Ball_create(320,120,troll1,troll2,0,NULL);
+            temp->b = head;
+            head = temp;
+            ballgen = 0;
+            numBalls++;
+        }
+        else
+            ballgen ++;
+        
+        //collision calculations
         struct Ball *ti = head;
         struct Ball *tj = NULL;
         if(ti != NULL)
             tj = ti->b;
-        
         while(ti !=NULL){
             //Calculates the collisions between every ball
             while(tj != NULL) {
@@ -79,7 +108,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 //Checks if ti and tj are not pointing to the same ball,
                 //If they close enough for a collision and there is no collision
                 //delay.
-                if( ti->delay + tj->delay == 0 && mag_rij < temp) {
+                if( ti->delay + tj->delay <= 0 && mag_rij < temp) {
                     int vij_x = ti->xvel - tj->xvel;
                     int vij_y = ti->yvel - tj->yvel;
                     int deltaVi_x = -1*(rij_x * ((rij_x * vij_x)+ (rij_y*vij_y)))/temp;
@@ -99,9 +128,9 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             }
             
             //checks for wall collisions
-            if(ti->xpos >= 240*scale || ti->xpos <= 0) 
+            if(ti->xpos >= 320*scale || ti->xpos <= 0) 
                 ti->xvel = -1*ti->xvel;
-            if(ti->ypos >= 320*scale || ti->ypos <= 0)
+            if(ti->ypos >= 240*scale || ti->ypos <= 35*scale)
                 ti->yvel = -1*ti->yvel;
             
             //calculates the drag
@@ -114,18 +143,37 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             else
                 ti->yvel = ti->yvel - ti->yvel/drag;
             
+            // Check for paddle Collisions
+            //NOTE: Need to calculate "paddle friction"
+            if(abs(ti->xpos/scale - paddle_xpos) < ballradius)
+                if(ti->ypos/scale > paddle_ypos && ti->ypos/scale < paddle_ypos + paddle_length)
+                    ti->xvel = -1*ti->xvel;
+            
             //Decrement the collide delay
             if(ti->delay > 0)
                 ti->delay = ti->delay -1;
             
+
             //iterates through the next set
             ti = ti->b;
             if(ti != NULL)
                 tj = ti->b;
+            
+            //removes the last element if the limit is reached
+            if(numBalls > maxBalls && tj->b == NULL) { 
+                tft_fillCircle(tj->xpos/scale,tj->ypos/scale,ballradius,ILI9340_BLACK);
+                ti->b = NULL;
+                numBalls --;
+            }
+                
         }
+        // Calculates position of the paddle and draw
+        //TODO: Calculate paddle position
+        tft_drawLine(paddle_xpos,paddle_ypos, paddle_xpos, paddle_ypos + paddle_length, ILI9340_WHITE);
         
-        // Now it calculates the new position and 
+        // Now it calculates the new position
 	    ti = head;
+        tj = head;
         while(ti != NULL){
             //"Clears" the image of the last ball
             tft_fillCircle(ti->xpos/scale,ti->ypos/scale,ballradius,ILI9340_BLACK);
@@ -135,22 +183,33 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             ti->ypos = ti->ypos + ti->yvel;
             
             //ensures the positions are within bounds
-            if(ti->xpos > 240*scale)
-                ti->xpos = 240*scale;
-            else if(ti->xpos < 0)
-                ti->xpos = 0;
-            
-            if(ti->ypos > 320*scale)
-                ti->ypos = 320*scale;
-            else if(ti->ypos < 0)
-                ti->ypos = 0;
-            
-            if(ti->delay != 0)
-                 tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, 500);
-            else
-                tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ILI9340_YELLOW);
+            //If the pos is less than 0 then we remove it
+            if(ti->xpos > 0) {
+                if(ti->xpos > 320*scale)
+                    ti->xpos = 320*scale;
+
+                if(ti->ypos > 240*scale)
+                    ti->ypos = 240*scale;
+                else if(ti->ypos < 35*scale)
+                    ti->ypos = 35*scale;
+
+                if(ti->delay != 0)
+                     tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, 500);
+                else
+                    tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ILI9340_YELLOW);
+            }
+            else { //REMOVES THE BALL IF IT CROSSES THE BOUNDARY
+                if(ti == head)
+                    head = head->b;
+                else
+                    tj->b = ti->b;
+                score--;
+                numBalls--;
+            }
+            tj = ti;
             ti = ti->b;
         }
+        frames ++;
    }
     PT_END(pt);
 } // blink
@@ -159,13 +218,25 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
 static PT_THREAD (protothread_calculate (struct pt *pt))
 {
     PT_BEGIN(pt);
-    while(1) {
-        PT_YIELD_TIME_msec(refreshRate);
+      while(1) {
+        // yield time 1 second
         
-
         
-   }
-    PT_END(pt);
+        int minutes = timeElapsed/60;
+        int seconds = timeElapsed%60;
+        // draw sys_time
+        tft_fillRoundRect(0,10, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+        tft_setCursor(0, 10);
+        tft_setTextColor(ILI9340_WHITE); tft_setTextSize(2);
+        sprintf(buffer,"%02d:%02d  FPS:%d  Score:%d", minutes,seconds, frames, score);
+        tft_writeString(buffer);
+        frames = 0;
+        PT_YIELD_TIME_msec(1000);
+        timeElapsed++ ;
+        
+        // NEVER exit while
+      } // END WHILE(1)
+  PT_END(pt);
 }
 //===================== Main ======================= //
 void main(void) {
@@ -176,16 +247,8 @@ void main(void) {
     PT_setup();
     refreshRate = 10; //msec
     
-    //Temporary Random Ball generator
-    head = Ball_create(50, 50, 2, 0,  0, NULL);
-    int i = 1;
-    for(i = 1; i < 15; i++) {
-        int troll1 = (rand() % 5);
-        int troll2 = (rand() % 5);
-        struct Ball *temp = Ball_create(i*20,i*20,troll1,troll2,0,NULL);
-        temp->b = head;
-        head = temp;
-    }
+    head = NULL;
+    
         
     // initialize the threads
     PT_INIT(&pt_calculate);
@@ -197,7 +260,7 @@ void main(void) {
     
     INTEnableSystemMultiVectoredInt();
 
-    tft_setRotation(0); //240x320 vertical display
+    tft_setRotation(1); //240x320 horizontal display
   
     //round-robin scheduler for threads
     while(1) {
