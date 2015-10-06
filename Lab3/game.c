@@ -33,25 +33,32 @@ struct Ball {
 
 static struct pt pt_calculate, pt_refresh;
 char buffer[60];
+
+//Points to the head of the linked list of balls
 struct Ball *head;
-//signed short max_velocity = 20;
+
+//Drag divisor to simulate friction between the ball and table
 int drag = 1000;
+//Scale is used to convert float point notation to fixed point
 int scale = 1000;
+//Define Ball radius and time between collisions
 uint8_t ballradius = 2;
 uint8_t delay_master = 10;
 
+//Parameters for the paddle
 uint8_t paddle_length = 30;
 uint8_t paddle_ypos = 100;
 uint8_t paddle_xpos = 6;
-uint8_t refreshRate;
+
+//keeps track of the frames per second
 uint8_t frames = 0;
 
+//these are used to control when balls are made and how many are made
 uint8_t numBalls = 0;
 uint8_t maxBalls = 50;
 uint8_t ballgen = 0;
 
 int score = 0;
-// system 1 second interval tick
 int timeElapsed ;
 //============== Create a ball ================//
 struct Ball *Ball_create(int xp, int yp, int xv, int yv,  uint8_t d, Ball *bb) {
@@ -245,7 +252,6 @@ void main(void) {
     ANSELA = 0; ANSELB = 0; CM1CON = 0; CM2CON = 0;
 
     PT_setup();
-    refreshRate = 10; //msec
     
     head = NULL;
     
