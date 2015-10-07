@@ -27,6 +27,7 @@ struct Ball {
     int ypos;
     int xvel;
     int yvel;
+    int color;
     uint8_t delay;
     Ball *b;
 } ball;
@@ -42,7 +43,7 @@ int drag = 1000;
 //Scale is used to convert float point notation to fixed point
 int scale = 1000;
 //Define Ball radius and time between collisions
-uint8_t ballradius = 2;
+uint8_t ballradius = 4;
 uint8_t delay_master = 10;
 
 //Parameters for the paddle
@@ -61,7 +62,7 @@ uint8_t ballgen = 0;
 int score = 0;
 int timeElapsed ;
 //============== Create a ball ================//
-struct Ball *Ball_create(int xp, int yp, int xv, int yv,  uint8_t d, Ball *bb) {
+struct Ball *Ball_create(int xp, int yp, int xv, int yv, int color,  uint8_t d, Ball *bb) {
     
     struct Ball *ba = malloc(sizeof(struct Ball));
     if(ba == NULL)
@@ -71,6 +72,7 @@ struct Ball *Ball_create(int xp, int yp, int xv, int yv,  uint8_t d, Ball *bb) {
     ba->ypos = yp*scale;
     ba->xvel = xv*scale;
     ba->yvel = yv*scale;
+    ba->color = color;
     ba->delay = d;
     ba->b = bb;
     
@@ -91,7 +93,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
         if(ballgen >= 40) {
             int troll1 = -(rand() % 2)-1;
             int troll2 = (rand() % 6) - 3;
-            struct Ball *temp = Ball_create(320,120,troll1,troll2,0,NULL);
+            struct Ball *temp = Ball_create(320,120,troll1,troll2,numBalls*1000,0,NULL);
             temp->b = head;
             head = temp;
             ballgen = 0;
@@ -118,8 +120,8 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 if( ti->delay + tj->delay <= 0 && mag_rij < temp) {
                     int vij_x = ti->xvel - tj->xvel;
                     int vij_y = ti->yvel - tj->yvel;
-                    int deltaVi_x = -1*(rij_x * ((rij_x * vij_x)+ (rij_y*vij_y)))/temp;
-                    int deltaVi_y = -1*(rij_y * ((rij_x * vij_x)+ (rij_y*vij_y)))/temp;
+                    long deltaVi_x = -1*rij_x * (((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
+                    long deltaVi_y = -1*rij_y * (((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
                     
                     //Updates the velocity
                     ti->xvel = ti->xvel + deltaVi_x;
@@ -168,7 +170,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             
             //removes the last element if the limit is reached
             if(numBalls > maxBalls && tj->b == NULL) { 
-                tft_fillCircle(tj->xpos/scale,tj->ypos/scale,ballradius,ILI9340_BLACK);
+                tft_fillCircle(tj->xpos/scale,tj->ypos/scale,ballradius,ILI9340_BLACK); //erases from the screen
                 ti->b = NULL;
                 numBalls --;
             }
@@ -201,9 +203,9 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                     ti->ypos = 35*scale;
 
                 if(ti->delay != 0)
-                     tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, 500);
+                     tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ILI9340_WHITE);
                 else
-                    tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ILI9340_YELLOW);
+                    tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ti->color);
             }
             else { //REMOVES THE BALL IF IT CROSSES THE BOUNDARY
                 if(ti == head)
