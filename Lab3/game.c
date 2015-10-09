@@ -41,9 +41,9 @@ struct Ball *head;
 //Drag divisor to simulate friction between the ball and table
 int drag = 1000;
 //Scale is used to convert float point notation to fixed point
-int scale = 1000;
+int scale = 100;
 //Define Ball radius and time between collisions
-uint8_t ballradius = 4;
+uint8_t ballradius = 2;
 uint8_t delay_master = 10;
 
 //Parameters for the paddle
@@ -56,7 +56,7 @@ uint8_t frames = 0;
 
 //these are used to control when balls are made and how many are made
 uint8_t numBalls = 0;
-uint8_t maxBalls = 50;
+uint8_t maxBalls = 30;
 uint8_t ballgen = 0;
 
 int score = 0;
@@ -90,7 +90,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
         PT_YIELD_TIME_msec(10);
         
         //Generates a new ball at a given interval
-        if(ballgen >= 40) {
+        if(ballgen >= 10) {
             int troll1 = -(rand() % 2)-1;
             int troll2 = (rand() % 6) - 3;
             struct Ball *temp = Ball_create(320,120,troll1,troll2,numBalls*1000,0,NULL);
@@ -120,9 +120,12 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 if( ti->delay + tj->delay <= 0 && mag_rij < temp) {
                     int vij_x = ti->xvel - tj->xvel;
                     int vij_y = ti->yvel - tj->yvel;
-                    long deltaVi_x = -1*rij_x * (((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
-                    long deltaVi_y = -1*rij_y * (((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
-                    
+                    if (mag_rij==0) {
+                        mag_rij=temp;
+                    }
+                    int deltaVi_x = (-1*(rij_x) * ((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
+                    int deltaVi_y = (-1*(rij_y) * ((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
+
                     //Updates the velocity
                     ti->xvel = ti->xvel + deltaVi_x;
                     ti->yvel = ti->yvel + deltaVi_y;
@@ -143,6 +146,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 ti->yvel = -1*ti->yvel;
             
             //calculates the drag
+            
             if(ti->xvel > 0)
                 ti->xvel = ti->xvel - ti->xvel/drag;
             else
@@ -172,7 +176,8 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             if(numBalls > maxBalls && tj->b == NULL) { 
                 tft_fillCircle(tj->xpos/scale,tj->ypos/scale,ballradius,ILI9340_BLACK); //erases from the screen
                 ti->b = NULL;
-                numBalls --;
+                numBalls--;
+                free(tj);
             }
                 
         }
@@ -214,8 +219,9 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                     tj->b = ti->b;
                 score--;
                 numBalls--;
+                free(ti);
             }
-            tj = ti;
+            tj = ti;//what does this do?
             ti = ti->b;
         }
         frames ++;
