@@ -20,6 +20,18 @@
 #define SYS_FREQ 40000000
 #include "pt_cornell_TFT.h"
 
+
+// === the fixed point macros ========================================
+typedef signed int fix16 ;
+#define multfix16(a,b) ((fix16)(((( signed long long)(a))*(( signed long long)(b)))>>16)) //multiply two fixed 16:16
+#define float2fix16(a) ((fix16)((a)*65536.0)) // 2^16
+#define fix2float16(a) ((float)(a)/65536.0)
+#define fix2int16(a)    ((int)((a)>>16))
+#define int2fix16(a)    ((fix16)((a)<<16))
+#define divfix16(a,b) ((fix16)((((signed long long)(a)<<16)/(b)))) 
+#define sqrtfix16(a) (float2fix16(sqrt(fix2float16(a)))) 
+#define absfix16(a) abs(a)
+
 // Define a struct for balls
 typedef struct Ball Ball;
 struct Ball {
@@ -30,25 +42,26 @@ struct Ball {
     int color;
     uint8_t delay;
     Ball *b;
-} ball;
+} ;
 
-static struct pt pt_calculate, pt_refresh;
+static struct pt pt_calculate, pt_refresh, pt_adc;
 char buffer[60];
 
 //Points to the head of the linked list of balls
 struct Ball *head;
-
+//ADC value
+volatile int adc_9;
 //Drag divisor to simulate friction between the ball and table
 int drag = 1000;
 //Scale is used to convert float point notation to fixed point
-int scale = 100;
+int scale = 1000;
 //Define Ball radius and time between collisions
-uint8_t ballradius = 2;
+uint8_t ballradius = 1;
 uint8_t delay_master = 10;
 
 //Parameters for the paddle
-uint8_t paddle_length = 30;
-uint8_t paddle_ypos = 100;
+uint8_t half_paddle_length = 15;
+uint8_t paddle_ypos = 105;
 uint8_t paddle_xpos = 6;
 
 //keeps track of the frames per second
@@ -91,8 +104,8 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
         
         //Generates a new ball at a given interval
         if(ballgen >= 10) {
-            int troll1 = -(rand() % 2)-1;
-            int troll2 = (rand() % 6) - 3;
+            int troll1 = -((rand()) % 2)-1;
+            int troll2 = ((rand()) % 6) - 3;
             struct Ball *temp = Ball_create(320,120,troll1,troll2,numBalls*1000,0,NULL);
             temp->b = head;
             head = temp;
@@ -123,9 +136,15 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                     if (mag_rij==0) {
                         mag_rij=temp;
                     }
-                    int deltaVi_x = (-1*(rij_x) * ((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
-                    int deltaVi_y = (-1*(rij_y) * ((rij_x * vij_x)+ (rij_y*vij_y)))/mag_rij;
-
+                    int deltaVi_x = (int)(-1*(rij_x)/128 * (128*((rij_x * vij_x)+ (rij_y*vij_y))/mag_rij));
+                    int deltaVi_y = (int)(-1*(rij_y)/128 * (128*((rij_x * vij_x)+ (rij_y*vij_y))/mag_rij));
+                    /*
+                    tft_fillRoundRect(0,30, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+                    tft_setCursor(0, 30);
+                    tft_setTextColor(ILI9340_WHITE); tft_setTextSize(2);
+                    sprintf(buffer,"%d:%d", (-1*(rij_x)/128 * (128*((rij_x * vij_x)+ (rij_y*vij_y))/mag_rij)), mag_rij);
+                    tft_writeString(buffer);
+                    */
                     //Updates the velocity
                     ti->xvel = ti->xvel + deltaVi_x;
                     ti->yvel = ti->yvel + deltaVi_y;
@@ -158,8 +177,8 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             
             // Check for paddle Collisions
             //NOTE: Need to calculate "paddle friction"
-            if(abs(ti->xpos/scale - paddle_xpos) < ballradius)
-                if(ti->ypos/scale > paddle_ypos && ti->ypos/scale < paddle_ypos + paddle_length)
+            if(ti->xpos/scale < paddle_xpos+ballradius)
+                if(ti->ypos/scale > paddle_ypos - half_paddle_length && ti->ypos/scale < paddle_ypos + half_paddle_length)
                     ti->xvel = -1*ti->xvel;
             
             //Decrement the collide delay
@@ -183,7 +202,9 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
         }
         // Calculates position of the paddle and draw
         //TODO: Calculate paddle position
-        tft_drawLine(paddle_xpos,paddle_ypos, paddle_xpos, paddle_ypos + paddle_length, ILI9340_WHITE);
+        tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_BLACK);
+        paddle_ypos=(adc_9*240)/1023;
+        tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_WHITE);
         
         // Now it calculates the new position
 	    ti = head;
@@ -253,6 +274,45 @@ static PT_THREAD (protothread_calculate (struct pt *pt))
       } // END WHILE(1)
   PT_END(pt);
 }
+
+// === ADC Thread =============================================
+// 
+
+static PT_THREAD (protothread_adc(struct pt *pt))
+{
+    PT_BEGIN(pt);
+ 
+    static float V;
+    static fix16 Vfix, ADC_scale ;
+    
+    ADC_scale = float2fix16(3.3/1023.0); //Vref/(full scale)
+            
+    while(1) {
+        // yield time 1 second
+        PT_YIELD_TIME_msec(60);
+        
+        // read the ADC from pin 24 (AN11)
+        // read the first buffer position
+        adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
+        AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
+        // draw adc and voltage
+        tft_fillRoundRect(0,50, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+        tft_setCursor(0, 50);
+        tft_setTextColor(ILI9340_YELLOW); tft_setTextSize(2);
+        // convert to voltage
+        V = (float)adc_9 * 3.3 / 1023.0 ; // Vref*adc/1023
+        // convert to fixed voltage
+        Vfix = multfix16(int2fix16(adc_9), ADC_scale) ;
+        
+        // print raw ADC, floating voltage, fixed voltage
+        sprintf(buffer,"%d %6.3f %d.%03d", adc_9, V, fix2int16(Vfix), fix2int16(Vfix*1000)-fix2int16(Vfix)*1000);
+        tft_writeString(buffer);
+        
+        // NEVER exit while
+      } // END WHILE(1)
+  PT_END(pt);
+} // animation thread
+
 //===================== Main ======================= //
 void main(void) {
     SYSTEMConfigPerformance(PBCLK);
@@ -263,10 +323,47 @@ void main(void) {
     
     head = NULL;
     
+    // the ADC ///////////////////////////////////////
+        // configure and enable the ADC
+	CloseADC10();	// ensure the ADC is off before setting the configuration
+
+	// define setup parameters for OpenADC10
+	// Turn module on | ouput in integer | trigger mode auto | enable autosample
+        // ADC_CLK_AUTO -- Internal counter ends sampling and starts conversion (Auto convert)
+        // ADC_AUTO_SAMPLING_ON -- Sampling begins immediately after last conversion completes; SAMP bit is automatically set
+        // ADC_AUTO_SAMPLING_OFF -- Sampling begins with AcquireADC10();
+        #define PARAM1  ADC_FORMAT_INTG16 | ADC_CLK_AUTO | ADC_AUTO_SAMPLING_OFF //
+
+	// define setup parameters for OpenADC10
+	// ADC ref external  | disable offset test | disable scan mode | do 1 sample | use single buf | alternate mode off
+	#define PARAM2  ADC_VREF_AVDD_AVSS | ADC_OFFSET_CAL_DISABLE | ADC_SCAN_OFF | ADC_SAMPLES_PER_INT_1 | ADC_ALT_BUF_OFF | ADC_ALT_INPUT_OFF
+        //
+	// Define setup parameters for OpenADC10
+        // use peripherial bus clock | set sample time | set ADC clock divider
+        // ADC_CONV_CLK_Tcy2 means divide CLK_PB by 2 (max speed)
+        // ADC_SAMPLE_TIME_5 seems to work with a source resistance < 1kohm
+        #define PARAM3 ADC_CONV_CLK_PB | ADC_SAMPLE_TIME_5 | ADC_CONV_CLK_Tcy2 //ADC_SAMPLE_TIME_15| ADC_CONV_CLK_Tcy2
+
+	// define setup parameters for OpenADC10
+	// set AN11 and  as analog inputs
+	#define PARAM4	ENABLE_AN11_ANA // pin 24
+
+	// define setup parameters for OpenADC10
+	// do not assign channels to scan
+	#define PARAM5	SKIP_SCAN_ALL
+
+	// use ground as neg ref for A | use AN11 for input A     
+	// configure to sample AN11 
+	SetChanADC10( ADC_CH0_NEG_SAMPLEA_NVREF | ADC_CH0_POS_SAMPLEA_AN11 ); // configure to sample AN4 
+	OpenADC10( PARAM1, PARAM2, PARAM3, PARAM4, PARAM5 ); // configure ADC using the parameters defined above
+
+	EnableADC10(); // Enable the ADC
+  ///////////////////////////////////////////////////////
         
     // initialize the threads
     PT_INIT(&pt_calculate);
     PT_INIT(&pt_refresh);
+    PT_INIT(&pt_adc);
     // initialize the display
     tft_init_hw();
     tft_begin();
@@ -280,6 +377,7 @@ void main(void) {
     while(1) {
         PT_SCHEDULE(protothread_calculate(&pt_calculate));
         PT_SCHEDULE(protothread_refresh(&pt_refresh));
+        PT_SCHEDULE(protothread_adc(&pt_adc));
     }
     
 } //main
