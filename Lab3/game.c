@@ -40,7 +40,7 @@ struct Ball {
     int xvel;
     int yvel;
     int color;
-    uint8_t delay;
+    int8_t delay;
     Ball *b;
 } ;
 
@@ -51,19 +51,23 @@ char buffer[60];
 struct Ball *head;
 //ADC value
 volatile int adc_9;
+
 //Drag divisor to simulate friction between the ball and table
 int drag = 1000;
 //Scale is used to convert float point notation to fixed point
-int scale = 1000;
+int scale = 1024;
 //Define Ball radius and time between collisions
-uint8_t ballradius = 1;
+uint8_t ballradius = 2;
 uint8_t delay_master = 10;
 
 //Parameters for the paddle
 uint8_t half_paddle_length = 15;
 uint8_t paddle_ypos = 105;
 uint8_t paddle_xpos = 6;
-
+//Paddle velocity;
+int paddle_v;
+//Paddle drag coefficient
+int paddle_drag=5;
 //keeps track of the frames per second
 uint8_t frames = 0;
 
@@ -130,14 +134,14 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 //Checks if ti and tj are not pointing to the same ball,
                 //If they close enough for a collision and there is no collision
                 //delay.
-                if( ti->delay + tj->delay <= 0 && mag_rij < temp) {
+                if( ti->delay + tj->delay == 0 && mag_rij < temp) {
                     int vij_x = ti->xvel - tj->xvel;
                     int vij_y = ti->yvel - tj->yvel;
                     if (mag_rij==0) {
                         mag_rij=temp;
                     }
-                    int deltaVi_x = (int)(-1*(rij_x)/128 * (128*((rij_x * vij_x)+ (rij_y*vij_y))/mag_rij));
-                    int deltaVi_y = (int)(-1*(rij_y)/128 * (128*((rij_x * vij_x)+ (rij_y*vij_y))/mag_rij));
+                    int deltaVi_x = (int)((-1*(rij_x) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
+                    int deltaVi_y = (int)((-1*(rij_y) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
                     /*
                     tft_fillRoundRect(0,30, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
                     tft_setCursor(0, 30);
@@ -159,11 +163,15 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             }
             
             //checks for wall collisions
+            
             if(ti->xpos >= 320*scale || ti->xpos <= 0) 
                 ti->xvel = -1*ti->xvel;
-            if(ti->ypos >= 240*scale || ti->ypos <= 35*scale)
+            if(ti->ypos >= 240*scale || ti->ypos <= 35*scale) {
                 ti->yvel = -1*ti->yvel;
-            
+                if (ti->xpos > 140*scale && ti->xpos < 180*scale) { //check for catch bin
+                    ti->delay=-1; //set to -1 to indicate +1 point
+                }
+            }
             //calculates the drag
             
             if(ti->xvel > 0)
@@ -177,10 +185,11 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             
             // Check for paddle Collisions
             //NOTE: Need to calculate "paddle friction"
-            if(ti->xpos/scale < paddle_xpos+ballradius)
-                if(ti->ypos/scale > paddle_ypos - half_paddle_length && ti->ypos/scale < paddle_ypos + half_paddle_length)
+            if(abs(paddle_xpos-ti->xpos/scale) < ballradius)
+                if(ti->ypos/scale > paddle_ypos - half_paddle_length && ti->ypos/scale < paddle_ypos + half_paddle_length) {
                     ti->xvel = -1*ti->xvel;
-            
+                    ti->yvel = ti->yvel + paddle_drag*paddle_v;
+                }
             //Decrement the collide delay
             if(ti->delay > 0)
                 ti->delay = ti->delay -1;
@@ -203,7 +212,9 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
         // Calculates position of the paddle and draw
         //TODO: Calculate paddle position
         tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_BLACK);
+        paddle_v=paddle_ypos;
         paddle_ypos=(adc_9*240)/1023;
+        paddle_v=paddle_ypos-paddle_v;
         tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_WHITE);
         
         // Now it calculates the new position
@@ -219,7 +230,8 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
             
             //ensures the positions are within bounds
             //If the pos is less than 0 then we remove it
-            if(ti->xpos > 0) {
+            //delay must also not be -1 (ie >=0)
+            if(ti->xpos > paddle_xpos && ti->delay != -1) {
                 if(ti->xpos > 320*scale)
                     ti->xpos = 320*scale;
 
@@ -228,17 +240,20 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 else if(ti->ypos < 35*scale)
                     ti->ypos = 35*scale;
 
-                if(ti->delay != 0)
+                if(ti->delay > 0)
                      tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ILI9340_WHITE);
                 else
                     tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ti->color);
             }
             else { //REMOVES THE BALL IF IT CROSSES THE BOUNDARY
+                if (ti->delay==-1) //check if went into catch bins
+                    score++;
+                else
+                    score--;
                 if(ti == head)
                     head = head->b;
                 else
                     tj->b = ti->b;
-                score--;
                 numBalls--;
                 free(ti);
             }
@@ -266,6 +281,12 @@ static PT_THREAD (protothread_calculate (struct pt *pt))
         tft_setTextColor(ILI9340_WHITE); tft_setTextSize(2);
         sprintf(buffer,"%02d:%02d  FPS:%d  Score:%d", minutes,seconds, frames, score);
         tft_writeString(buffer);
+        // draw catch bins
+        tft_fillRoundRect(140,35, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+        tft_fillRoundRect(140,235, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+        tft_fillRoundRect(180,35, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+        tft_fillRoundRect(180,235, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+
         frames = 0;
         PT_YIELD_TIME_msec(1000);
         timeElapsed++ ;
@@ -295,18 +316,7 @@ static PT_THREAD (protothread_adc(struct pt *pt))
         // read the first buffer position
         adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
         AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
-        // draw adc and voltage
-        tft_fillRoundRect(0,50, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
-        tft_setCursor(0, 50);
-        tft_setTextColor(ILI9340_YELLOW); tft_setTextSize(2);
-        // convert to voltage
-        V = (float)adc_9 * 3.3 / 1023.0 ; // Vref*adc/1023
-        // convert to fixed voltage
-        Vfix = multfix16(int2fix16(adc_9), ADC_scale) ;
-        
-        // print raw ADC, floating voltage, fixed voltage
-        sprintf(buffer,"%d %6.3f %d.%03d", adc_9, V, fix2int16(Vfix), fix2int16(Vfix*1000)-fix2int16(Vfix)*1000);
-        tft_writeString(buffer);
+ 
         
         // NEVER exit while
       } // END WHILE(1)
