@@ -114,8 +114,9 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
     PT_YIELD_TIME_msec(100);
     //waits for the scoreboard to be set up
     while(1) {
-        PT_YIELD_TIME_msec(10);
+        
         while (timeElapsed <=60) {
+            PT_YIELD_TIME_msec(10);
             //Generates a new ball at a given interval
             if(ballgen >= 10) {
                 int troll1 = -((rand()) % 2)-1;
@@ -274,7 +275,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
        }
        
             tft_fillRoundRect(0,35, 320, 205, 1, ILI9340_BLACK);// x,y,w,h,radius,color
-            tft_setCursor(70, 120);
+            tft_setCursor(10, 120);
             tft_setTextColor(ILI9340_WHITE); tft_setTextSize(4);
             sprintf(buffer,"Game Over! Score:%d", score);
             tft_writeString(buffer);
