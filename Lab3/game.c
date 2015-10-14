@@ -76,6 +76,7 @@ uint8_t numBalls = 0;
 uint8_t maxBalls = 30;
 uint8_t ballgen = 0;
 
+int dist;
 int score = 0;
 int timeElapsed ;
 //============== Create a ball ================//
@@ -107,7 +108,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
         PT_YIELD_TIME_msec(10);
         
         //Generates a new ball at a given interval
-        if(ballgen >= 10) {
+        if(ballgen >= 50) {
             int troll1 = -((rand()) % 2)-1;
             int troll2 = ((rand()) % 6) - 3;
             struct Ball *temp = Ball_create(320,120,troll1,troll2,numBalls*1000,0,NULL);
@@ -130,15 +131,14 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 int rij_x = ti->xpos - tj->xpos;
                 int rij_y = ti->ypos - tj->ypos;
                 int mag_rij = pow(rij_x,2) + pow(rij_y,2);
-                int temp = pow(2*(ballradius*scale),2);
                 //Checks if ti and tj are not pointing to the same ball,
                 //If they close enough for a collision and there is no collision
                 //delay.
-                if( ti->delay + tj->delay == 0 && mag_rij < temp) {
+                if( ti->delay + tj->delay == 0 && mag_rij < dist) {
                     int vij_x = ti->xvel - tj->xvel;
                     int vij_y = ti->yvel - tj->yvel;
                     if (mag_rij==0) {
-                        mag_rij=temp;
+                        mag_rij=dist;
                     }
                     int deltaVi_x = (int)((-1*(rij_x) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
                     int deltaVi_y = (int)((-1*(rij_y) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
@@ -328,6 +328,7 @@ void main(void) {
     PT_setup();
     
     head = NULL;
+    dist = pow(2*(ballradius*scale),2);
     
     // the ADC ///////////////////////////////////////
         // configure and enable the ADC
