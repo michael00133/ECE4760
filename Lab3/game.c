@@ -276,9 +276,9 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
        
        tft_fillRoundRect(0,35, 320, 205, 1, ILI9340_BLACK);// x,y,w,h,radius,color
        while (1) {
-            tft_setCursor(10, 120);
-            tft_setTextColor(ILI9340_WHITE); tft_setTextSize(2);
-            sprintf(buffer,"Game Over! Score:%d", score);
+            tft_setCursor(20, 120);
+            tft_setTextColor(ILI9340_WHITE); tft_setTextSize(4);
+            sprintf(buffer,"Game Over!", );
             tft_writeString(buffer);
        }
    }
