@@ -87,7 +87,7 @@ volatile unsigned int phase, incr, DAC_value; // DDS variables
 //volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
 
 int score = 0;
-int timeElapsed ;
+int timeElapsed =0 ;
 //============== Create a ball ================//
 struct Ball *Ball_create(int xp, int yp, int xv, int yv, int color,  uint8_t d, Ball *bb) {
     
@@ -115,162 +115,170 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
     //waits for the scoreboard to be set up
     while(1) {
         PT_YIELD_TIME_msec(10);
-        
-        //Generates a new ball at a given interval
-        if(ballgen >= 10) {
-            int troll1 = -((rand()) % 2)-1;
-            int troll2 = ((rand()) % 6) - 3;
-            struct Ball *temp = Ball_create(320,120,troll1,troll2,(numBalls+1)*500,0,NULL);
-            temp->b = head;
-            head = temp;
-            ballgen = 0;
-            numBalls++;
-        }
-        else
-            ballgen ++;
-        
-        //collision calculations
-        struct Ball *ti = head;
-        struct Ball *tj = NULL;
-        if(ti != NULL)
-            tj = ti->b;
-        while(ti !=NULL){
-            //Calculates the collisions between every ball
-            while(tj != NULL) {
-                int rij_x = ti->xpos - tj->xpos;
-                int rij_y = ti->ypos - tj->ypos;
-                int mag_rij = pow(rij_x,2) + pow(rij_y,2);
-                //Checks if ti and tj are not pointing to the same ball,
-                //If they close enough for a collision and there is no collision
-                //delay.
-                if( ti->delay + tj->delay == 0 && mag_rij < dist) {
-                    int vij_x = ti->xvel - tj->xvel;
-                    int vij_y = ti->yvel - tj->yvel;
-                    if (mag_rij==0) {
-                        mag_rij=dist;
-                    }
-                    int deltaVi_x = (int)((-1*(rij_x) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
-                    int deltaVi_y = (int)((-1*(rij_y) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
-                    /*
-                    tft_fillRoundRect(0,30, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
-                    tft_setCursor(0, 30);
-                    tft_setTextColor(ILI9340_WHITE); tft_setTextSize(2);
-                    sprintf(buffer,"%d:%d", (-1*(rij_x)/128 * (128*((rij_x * vij_x)+ (rij_y*vij_y))/mag_rij)), mag_rij);
-                    tft_writeString(buffer);
-                    */
-                    //Updates the velocity
-                    ti->xvel = ti->xvel + deltaVi_x;
-                    ti->yvel = ti->yvel + deltaVi_y;
-                    
-                    tj->xvel = tj->xvel - deltaVi_x;
-                    tj->yvel = tj->yvel - deltaVi_y;
-                    
-                    ti->delay = delay_master;
-                    tj->delay = delay_master;
-                }
-                tj = tj->b;
+        if (timeElapsed <=60) {
+            //Generates a new ball at a given interval
+            if(ballgen >= 10) {
+                int troll1 = -((rand()) % 2)-1;
+                int troll2 = ((rand()) % 6) - 3;
+                struct Ball *temp = Ball_create(320,120,troll1,troll2,(numBalls+1)*500,0,NULL);
+                temp->b = head;
+                head = temp;
+                ballgen = 0;
+                numBalls++;
             }
-            
-            //checks for wall collisions
-            
-            if(ti->xpos >= 320*scale || ti->xpos <= 0) 
-                ti->xvel = -1*ti->xvel;
-            if(ti->ypos >= 240*scale || ti->ypos <= 35*scale) {
-                ti->yvel = -1*ti->yvel;
-                if (ti->xpos > 120*scale && ti->xpos < 200*scale) { //check for catch bin
-                    ti->delay=-1; //set to -1 to indicate +1 point
-                }
-            }
-            //calculates the drag
-            
-            if(ti->xvel > 0)
-                ti->xvel = ti->xvel - ti->xvel/drag;
             else
-                ti->xvel = ti->xvel + ti->xvel/drag;
-            if(ti->yvel > 0)
-                ti->yvel = ti->yvel - ti->yvel/drag;
-            else
-                ti->yvel = ti->yvel - ti->yvel/drag;
-            
-            // Check for paddle Collisions
-            if(abs(paddle_xpos-ti->xpos/scale) <= ballradius && ti->delay == 0)
-                if(ti->ypos/scale > paddle_ypos - half_paddle_length && ti->ypos/scale < paddle_ypos + half_paddle_length) {
-                    ti->xvel = -1*ti->xvel;
-                    ti->yvel = ti->yvel + paddle_drag*paddle_v;
-                    ti->delay=delay_master;
-                }
-            //Decrement the collide delay
-            if(ti->delay > 0)
-                ti->delay = ti->delay -1;
-            
+                ballgen ++;
 
-            //iterates through the next set
-            ti = ti->b;
+            //collision calculations
+            struct Ball *ti = head;
+            struct Ball *tj = NULL;
             if(ti != NULL)
                 tj = ti->b;
-            
-            //removes the last element if the limit is reached
-            if(numBalls > maxBalls && tj->b == NULL) { 
-                tft_fillCircle(tj->xpos/scale,tj->ypos/scale,ballradius,ILI9340_BLACK); //erases from the screen
-                ti->b = NULL;
-                numBalls--;
-                score++;
-                //free(tj);
-            }
-                
-        }
-        // Calculates position of the paddle and draw
-        //TODO: Calculate paddle position
-        tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_BLACK);
-        paddle_v=paddle_ypos;
-        paddle_ypos=(adc_9*240)/1023;
-        paddle_v=paddle_ypos-paddle_v;
-        tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_WHITE);
-        
-        // Now it calculates the new position
-	    ti = head;
-        tj = head;
-        while(ti != NULL){
-            //"Clears" the image of the last ball
-            tft_fillCircle(ti->xpos/scale,ti->ypos/scale,ballradius,ILI9340_BLACK);
-            
-            //Updates the new position of the ball
-            ti->xpos = ti->xpos + ti->xvel;
-            ti->ypos = ti->ypos + ti->yvel;
-            
-            //ensures the positions are within bounds
-            //If the pos is less than 0 then we remove it
-            //delay must also not be -1 (ie >=0)
-            if(ti->xpos > paddle_xpos && ti->delay != -1) {
-                if(ti->xpos > 320*scale)
-                    ti->xpos = 320*scale;
+            while(ti !=NULL){
+                //Calculates the collisions between every ball
+                while(tj != NULL) {
+                    int rij_x = ti->xpos - tj->xpos;
+                    int rij_y = ti->ypos - tj->ypos;
+                    int mag_rij = pow(rij_x,2) + pow(rij_y,2);
+                    //Checks if ti and tj are not pointing to the same ball,
+                    //If they close enough for a collision and there is no collision
+                    //delay.
+                    if( ti->delay + tj->delay == 0 && mag_rij < dist) {
+                        int vij_x = ti->xvel - tj->xvel;
+                        int vij_y = ti->yvel - tj->yvel;
+                        if (mag_rij==0) {
+                            mag_rij=dist;
+                        }
+                        int deltaVi_x = (int)((-1*(rij_x) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
+                        int deltaVi_y = (int)((-1*(rij_y) * ((((rij_x * vij_x)+ (rij_y*vij_y)) << 7)/mag_rij)) >> 7);
+                        /*
+                        tft_fillRoundRect(0,30, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+                        tft_setCursor(0, 30);
+                        tft_setTextColor(ILI9340_WHITE); tft_setTextSize(2);
+                        sprintf(buffer,"%d:%d", (-1*(rij_x)/128 * (128*((rij_x * vij_x)+ (rij_y*vij_y))/mag_rij)), mag_rij);
+                        tft_writeString(buffer);
+                        */
+                        //Updates the velocity
+                        ti->xvel = ti->xvel + deltaVi_x;
+                        ti->yvel = ti->yvel + deltaVi_y;
 
-                if(ti->ypos > 240*scale)
-                    ti->ypos = 240*scale;
-                else if(ti->ypos < 35*scale)
-                    ti->ypos = 35*scale;
+                        tj->xvel = tj->xvel - deltaVi_x;
+                        tj->yvel = tj->yvel - deltaVi_y;
 
+                        ti->delay = delay_master;
+                        tj->delay = delay_master;
+                    }
+                    tj = tj->b;
+                }
+
+                //checks for wall collisions
+
+                if(ti->xpos >= 320*scale || ti->xpos <= 0) 
+                    ti->xvel = -1*ti->xvel;
+                if(ti->ypos >= 240*scale || ti->ypos <= 35*scale) {
+                    ti->yvel = -1*ti->yvel;
+                    if (ti->xpos > 120*scale && ti->xpos < 200*scale) { //check for catch bin
+                        ti->delay=-1; //set to -1 to indicate +1 point
+                    }
+                }
+                //calculates the drag
+
+                if(ti->xvel > 0)
+                    ti->xvel = ti->xvel - ti->xvel/drag;
+                else
+                    ti->xvel = ti->xvel + ti->xvel/drag;
+                if(ti->yvel > 0)
+                    ti->yvel = ti->yvel - ti->yvel/drag;
+                else
+                    ti->yvel = ti->yvel - ti->yvel/drag;
+
+                // Check for paddle Collisions
+                if(abs(paddle_xpos-ti->xpos/scale) <= ballradius && ti->delay == 0)
+                    if(ti->ypos/scale > paddle_ypos - half_paddle_length && ti->ypos/scale < paddle_ypos + half_paddle_length) {
+                        ti->xvel = -1*ti->xvel;
+                        ti->yvel = ti->yvel + paddle_drag*paddle_v;
+                        ti->delay=delay_master;
+                    }
+                //Decrement the collide delay
                 if(ti->delay > 0)
-                     tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ILI9340_WHITE);
-                else
-                    tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ti->color);
-            }
-            else { //REMOVES THE BALL IF IT CROSSES THE BOUNDARY
-                if (ti->delay==-1) //check if went into catch bins
+                    ti->delay = ti->delay -1;
+
+
+                //iterates through the next set
+                ti = ti->b;
+                if(ti != NULL)
+                    tj = ti->b;
+
+                //removes the last element if the limit is reached
+                if(numBalls > maxBalls && tj->b == NULL) { 
+                    tft_fillCircle(tj->xpos/scale,tj->ypos/scale,ballradius,ILI9340_BLACK); //erases from the screen
+                    ti->b = NULL;
+                    numBalls--;
                     score++;
-                else
-                    score--;
-                if(ti == head)
-                    head = head->b;
-                else
-                    tj->b = ti->b;
-                numBalls--;
-                //free(ti);
+                    //free(tj);
+                }
+
             }
-            tj = ti;//what does this do?
-            ti = ti->b;
-        }
-        frames ++;
+            // Calculates position of the paddle and draw
+            //TODO: Calculate paddle position
+            tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_BLACK);
+            paddle_v=paddle_ypos;
+            paddle_ypos=(adc_9*240)/1023;
+            paddle_v=paddle_ypos-paddle_v;
+            tft_drawLine(paddle_xpos,paddle_ypos - half_paddle_length, paddle_xpos, paddle_ypos + half_paddle_length, ILI9340_WHITE);
+
+            // Now it calculates the new position
+            ti = head;
+            tj = head;
+            while(ti != NULL){
+                //"Clears" the image of the last ball
+                tft_fillCircle(ti->xpos/scale,ti->ypos/scale,ballradius,ILI9340_BLACK);
+
+                //Updates the new position of the ball
+                ti->xpos = ti->xpos + ti->xvel;
+                ti->ypos = ti->ypos + ti->yvel;
+
+                //ensures the positions are within bounds
+                //If the pos is less than 0 then we remove it
+                //delay must also not be -1 (ie >=0)
+                if(ti->xpos > paddle_xpos && ti->delay != -1) {
+                    if(ti->xpos > 320*scale)
+                        ti->xpos = 320*scale;
+
+                    if(ti->ypos > 240*scale)
+                        ti->ypos = 240*scale;
+                    else if(ti->ypos < 35*scale)
+                        ti->ypos = 35*scale;
+
+                    if(ti->delay > 0)
+                         tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ILI9340_WHITE);
+                    else
+                        tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ti->color);
+                }
+                else { //REMOVES THE BALL IF IT CROSSES THE BOUNDARY
+                    if (ti->delay==-1) //check if went into catch bins
+                        score++;
+                    else
+                        score--;
+                    if(ti == head)
+                        head = head->b;
+                    else
+                        tj->b = ti->b;
+                    numBalls--;
+                    //free(ti);
+                }
+                tj = ti;//what does this do?
+                ti = ti->b;
+            }
+            frames ++;
+       }
+       else {
+            tft_fillRoundRect(0,35, 320, 205, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+            tft_setCursor(120, 120);
+            tft_setTextColor(ILI9340_WHITE); tft_setTextSize(4);
+            sprintf(buffer,"Game Over! Score:%d", score);
+            tft_writeString(buffer);
+       }
    }
     PT_END(pt);
 } // blink
