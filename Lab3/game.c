@@ -73,7 +73,7 @@ uint8_t frames = 0;
 
 //these are used to control when balls are made and how many are made
 uint8_t numBalls = 0;
-uint8_t maxBalls = 30;
+uint8_t maxBalls = 50;
 uint8_t ballgen = 0;
 
 int dist;
@@ -108,10 +108,10 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
         PT_YIELD_TIME_msec(10);
         
         //Generates a new ball at a given interval
-        if(ballgen >= 50) {
+        if(ballgen >= 10) {
             int troll1 = -((rand()) % 2)-1;
             int troll2 = ((rand()) % 6) - 3;
-            struct Ball *temp = Ball_create(320,120,troll1,troll2,numBalls*1000,0,NULL);
+            struct Ball *temp = Ball_create(320,120,troll1,troll2,(numBalls+1)*500,0,NULL);
             temp->b = head;
             head = temp;
             ballgen = 0;
@@ -168,7 +168,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 ti->xvel = -1*ti->xvel;
             if(ti->ypos >= 240*scale || ti->ypos <= 35*scale) {
                 ti->yvel = -1*ti->yvel;
-                if (ti->xpos > 140*scale && ti->xpos < 180*scale) { //check for catch bin
+                if (ti->xpos > 120*scale && ti->xpos < 200*scale) { //check for catch bin
                     ti->delay=-1; //set to -1 to indicate +1 point
                 }
             }
@@ -184,10 +184,11 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 ti->yvel = ti->yvel - ti->yvel/drag;
             
             // Check for paddle Collisions
-            if(abs(paddle_xpos-ti->xpos/scale) <= ballradius)
+            if(abs(paddle_xpos-ti->xpos/scale) <= ballradius && ti->delay == 0)
                 if(ti->ypos/scale > paddle_ypos - half_paddle_length && ti->ypos/scale < paddle_ypos + half_paddle_length) {
                     ti->xvel = -1*ti->xvel;
                     ti->yvel = ti->yvel + paddle_drag*paddle_v;
+                    ti->delay=delay_master;
                 }
             //Decrement the collide delay
             if(ti->delay > 0)
@@ -205,7 +206,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 ti->b = NULL;
                 numBalls--;
                 score++;
-                free(tj);
+                //free(tj);
             }
                 
         }
@@ -255,7 +256,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 else
                     tj->b = ti->b;
                 numBalls--;
-                free(ti);
+                //free(ti);
             }
             tj = ti;//what does this do?
             ti = ti->b;
@@ -282,10 +283,10 @@ static PT_THREAD (protothread_calculate (struct pt *pt))
         sprintf(buffer,"%02d:%02d  FPS:%d  Score:%d", minutes,seconds, frames, score);
         tft_writeString(buffer);
         // draw catch bins
-        tft_fillRoundRect(140,35, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
-        tft_fillRoundRect(140,235, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
-        tft_fillRoundRect(180,35, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
-        tft_fillRoundRect(180,235, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+        tft_fillRoundRect(120,35, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+        tft_fillRoundRect(120,235, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+        tft_fillRoundRect(200,35, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
+        tft_fillRoundRect(200,235, 2, 5, 1, ILI9340_WHITE);// x,y,w,h,radius,color
 
         frames = 0;
         PT_YIELD_TIME_msec(1000);
@@ -306,7 +307,7 @@ static PT_THREAD (protothread_adc(struct pt *pt))
              
     while(1) {
         // yield time 1 second
-        PT_YIELD_TIME_msec(60);
+        PT_YIELD_TIME_msec(2);
         
         // read the ADC from pin 24 (AN11)
         // read the first buffer position
