@@ -81,7 +81,7 @@ int dist;
 
 //DMA Parameters
 #define sine_table_size 64
-volatile unsigned char sine_table[sine_table_size];
+unsigned char sine_table[sine_table_size];
 
 volatile unsigned int phase, incr, DAC_value; // DDS variables
 //volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
@@ -278,7 +278,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
        while (1) {
             tft_setCursor(20, 120);
             tft_setTextColor(ILI9340_WHITE); tft_setTextSize(4);
-            sprintf(buffer,"Game Over!", );
+            sprintf(buffer,"Game Over!");
             tft_writeString(buffer);
        }
    }
@@ -342,7 +342,7 @@ static PT_THREAD (protothread_adc(struct pt *pt))
 // Timer 3 interrupt handler ///////
 // ipl2 means "interrupt priority level 2"
 // ASM output is 47 instructions for the ISR
-/*void __ISR(_TIMER_3_VECTOR, ipl2) Timer3Handler(void)
+void __ISR(_TIMER_3_VECTOR, ipl2) Timer3Handler(void)
 {
     // clear the interrupt flag
     mT3ClearIntFlag();
@@ -350,7 +350,7 @@ static PT_THREAD (protothread_adc(struct pt *pt))
     phase = phase + incr ; 
     DAC_value = sine_table[phase >> 26] ; //length 64 table => use top 6 bits
     CVRCON = CVRCON_setup | DAC_value ;
-}*/
+}
 
 //===================== Main ======================= //
 void main(void) {
@@ -369,17 +369,8 @@ void main(void) {
         sine_table[i] = (unsigned char) (7.5 * sin((float)i*6.283/(float)sine_table_size)+8.0);
     }
     
-    //
+      //
    int	dmaChn=0;		// the DMA channel to use
-
-	// first let us set the LED I/O ports as digital outputs
-        // PIN 2 on 28 pin PDIP
-        mPORTAClearBits(BIT_0 );		//Clear bits to ensure light is off.
-        mPORTASetPinsDigitalOut(BIT_0 );    //Set port as output
-
-        // PIN 4 on 28 pin PDIP
-        mPORTBClearBits(BIT_0);		//Clear bits to ensure light is off.
-        mPORTBSetPinsDigitalOut(BIT_0 );    //Set port as output
 
 	// Open the desired DMA channel.
 	// We enable the AUTO option, we'll keep repeating the sam transfer over and over.
@@ -388,20 +379,34 @@ void main(void) {
 	// set the transfer parameters: source & destination address, source & destination size, number of bytes per event
         // Setting the last parameter to one makes the DMA output one byte/interrupt
 	// DmaChnSetTxfer(dmaChn, LED_pattern, (void*)&LATA, sizeof(LED_pattern), 1, 1);
-      //  DmaChnSetTxfer(dmaChn, LED_pattern, (void*)&LATA, sizeof(LED_pattern), 1, sizeof(LED_pattern));
+       DmaChnSetTxfer(dmaChn, sine_table, (void*)&LATA, sizeof(sine_table), 1, sizeof(sine_table));
 
 	// set the transfer event control: what event is to start the DMA transfer
         // In this case, timer3 
 	DmaChnSetEventControl(dmaChn, DMA_EV_START_IRQ(_TIMER_3_IRQ));
-
-	// once we configured the DMA channel we can enable it
-	// now it's ready and waiting for an event to occur...
 	DmaChnEnable(dmaChn);
+    
+    // set up the Vref pin and use as a DAC
+        // enable module| eanble output | use low range output | use internal reference | desired step
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        // And read back setup from CVRCON for speed later
+        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
+        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
 
+    OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, 400); //125
+    
+    // set up the timer interrupt with a priority of 2
+         ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_2);
+        mT3ClearIntFlag(); // and clear the interrupt flag
 
-	// now use the 32 bit timer to generate an interrupt to start the
-        // DMA burst ever 125 ticks
-        OpenTimer23(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 100); //125
+        // Fout = incr*Fs/(2^32)
+        // Or incr = Fout*(2^32)/Fs
+        // With Fs = 1e5 (100kHz)
+        // incr = Fout * 42949.67
+        // middle C is 261.6 Hz so incr=11235641
+        incr = 11235641 ; // 261.6 Hz
+        // incr = 0x20000000 ; // for documenting the ISR rate
+        
         
     // the ADC ///////////////////////////////////////
         // configure and enable the ADC
