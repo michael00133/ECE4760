@@ -184,8 +184,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 ti->yvel = ti->yvel - ti->yvel/drag;
             
             // Check for paddle Collisions
-            //NOTE: Need to calculate "paddle friction"
-            if(abs(paddle_xpos-ti->xpos/scale) < ballradius)
+            if(abs(paddle_xpos-ti->xpos/scale) <= ballradius)
                 if(ti->ypos/scale > paddle_ypos - half_paddle_length && ti->ypos/scale < paddle_ypos + half_paddle_length) {
                     ti->xvel = -1*ti->xvel;
                     ti->yvel = ti->yvel + paddle_drag*paddle_v;
@@ -205,6 +204,7 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                 tft_fillCircle(tj->xpos/scale,tj->ypos/scale,ballradius,ILI9340_BLACK); //erases from the screen
                 ti->b = NULL;
                 numBalls--;
+                score++;
                 free(tj);
             }
                 
@@ -303,11 +303,7 @@ static PT_THREAD (protothread_adc(struct pt *pt))
 {
     PT_BEGIN(pt);
  
-    static float V;
-    static fix16 Vfix, ADC_scale ;
-    
-    ADC_scale = float2fix16(3.3/1023.0); //Vref/(full scale)
-            
+             
     while(1) {
         // yield time 1 second
         PT_YIELD_TIME_msec(60);
