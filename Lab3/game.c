@@ -20,7 +20,9 @@
 #define SYS_FREQ 40000000
 #include "pt_cornell_TFT.h"
 
-
+#define dmaChn 0
+#define dmaChn2 1
+#define dmaChn3 2
 // === the fixed point macros ========================================
 typedef signed int fix16 ;
 #define multfix16(a,b) ((fix16)(((( signed long long)(a))*(( signed long long)(b)))>>16)) //multiply two fixed 16:16
@@ -80,8 +82,8 @@ uint8_t ballgen = 0;
 int dist;
 
 //DMA Parameters
-#define sine_table_size 64
-unsigned char sine_table[sine_table_size];
+//#define sine_table_size 64
+
 
 volatile unsigned int phase, incr, DAC_value; // DDS variables
 //volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
@@ -105,7 +107,6 @@ struct Ball *Ball_create(int xp, int yp, int xv, int yv, int color,  uint8_t d, 
     
     return ba;
 }
-
 //======================= Refresh ========================= //
 //Does Ball calculations and Draws the necessary elements on the screen 
 static PT_THREAD (protothread_refresh(struct pt *pt))
@@ -116,7 +117,10 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
     while(1) {
         
         while (timeElapsed <=60) {
+            
             PT_YIELD_TIME_msec(10);
+            DmaChnDisable(dmaChn);
+            DmaChnDisable(dmaChn2);
             //Generates a new ball at a given interval
             if(ballgen >= 10) {
                 int troll1 = -((rand()) % 2)-1;
@@ -257,10 +261,15 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
                         tft_fillCircle(ti->xpos/scale, ti->ypos/scale, ballradius, ti->color);
                 }
                 else { //REMOVES THE BALL IF IT CROSSES THE BOUNDARY
-                    if (ti->delay==-1) //check if went into catch bins
+                    if (ti->delay==-1) { //check if went into catch bins
                         score++;
-                    else
+                        DmaChnEnable(dmaChn2);
+                    }
+                    else {
+                        	DmaChnEnable(dmaChn);
+                            
                         score--;
+                    }
                     if(ti == head)
                         head = head->b;
                     else
@@ -275,7 +284,11 @@ static PT_THREAD (protothread_refresh(struct pt *pt))
        }
        
        tft_fillRoundRect(0,35, 320, 205, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+       DmaChnDisable(dmaChn);
+       DmaChnDisable(dmaChn2);
+       DmaChnEnable(dmaChn3);
        while (1) {
+           
             tft_setCursor(20, 120);
             tft_setTextColor(ILI9340_WHITE); tft_setTextSize(4);
             sprintf(buffer,"Game Over!");
@@ -339,19 +352,6 @@ static PT_THREAD (protothread_adc(struct pt *pt))
   PT_END(pt);
 } // animation thread
 
-// Timer 3 interrupt handler ///////
-// ipl2 means "interrupt priority level 2"
-// ASM output is 47 instructions for the ISR
-void __ISR(_TIMER_3_VECTOR, ipl2) Timer3Handler(void)
-{
-    // clear the interrupt flag
-    mT3ClearIntFlag();
-    // do the Direct Digital Synthesis
-    phase = phase + incr ; 
-    DAC_value = sine_table[phase >> 26] ; //length 64 table => use top 6 bits
-    CVRCON = CVRCON_setup | DAC_value ;
-}
-
 //===================== Main ======================= //
 void main(void) {
     //SYSTEMConfigPerformance(PBCLK);
@@ -364,50 +364,81 @@ void main(void) {
     head = NULL;
     dist = pow(2*(ballradius*scale),2);
     
-    int i;
-    for (i = 0; i < sine_table_size; i++){
-        sine_table[i] = (unsigned char) (7.5 * sin((float)i*6.283/(float)sine_table_size)+8.0);
-    }
-    
-      //
-   int	dmaChn=0;		// the DMA channel to use
+        int timer_limit;
+        int sine_table_size;
+    // frequency settable to better than 2% relative accuracy at low frequency
+        // frequency settable to 5% accuracy at highest frequency
+        // Useful frequency range 10 Hz to 100KHz
+        // >40 db attenuation of  next highest amplitude frequency component below 100 kHz
+        // >35 db above 100 KHz
+        #define F_OUT 80000
+        if (F_OUT <= 5000 ){
+            sine_table_size = 256 ;
+            timer_limit = SYS_FREQ/(sine_table_size*F_OUT) ;
+        }
+        else if (F_OUT <= 10000 ){
+            sine_table_size = 128 ;
+            timer_limit = SYS_FREQ/(sine_table_size*F_OUT) ;
+        }
+        else if (F_OUT <= 20000 ){
+            sine_table_size = 64 ;
+            timer_limit = SYS_FREQ/(sine_table_size*F_OUT) ;
+        }
+        else if (F_OUT <= 100000 ){
+            sine_table_size = 32 ;
+            timer_limit = SYS_FREQ/(sine_table_size*F_OUT) ;
+        }
+        else {
+            sine_table_size = 16 ;
+            timer_limit = SYS_FREQ/(sine_table_size*F_OUT) ;
+        }
 
-	// Open the desired DMA channel.
+         // build the sine lookup table
+        // scaled to produce values between 0 and 63 (six bit)
+        int i;
+        unsigned char sine_table[sine_table_size];
+        for (i = 0; i < sine_table_size; i++){
+        //sine_table[i] =(unsigned char) (31.5 * sin((float)i*6.283/(float)sine_table_size) + 32); //
+           // s =(unsigned char) (63.5 * sin((float)i*6.283/(float)sine_table_size) + 64); //7 bit
+            unsigned char s =(unsigned char) (63.5 * sin((float)i*6.283/(float)sine_table_size) + 64); //7 bit
+            //sine_table[i] = (s & 0x3f) | ((s & 0x40)<<1) ;
+            sine_table[i] = 0x60 | s;
+         }
+        
+        // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
+        // Uses macro to set timer tick to 2 microSec = 120 cycles 500 kHz DDS
+        // peripheral at 60 MHz
+        //--------------------
+        //------------------
+        // 64 LEVEL samples thru external DAC
+        // interval=60, 32 samples, 31200 Hz, next harmonic 40 db down
+        // interval=20, 32 samples, 90.8 KHz, next harmonic 45 db down
+        // interval=600, 32 samples, 3170 Hz, next harmonic 32 db down
+        // interval=300, 64 samples, 3170 Hz, next harmonic 38 db down
+        // interval=150, 128 samples, 3170 Hz, next harmonic 43  db down
+        OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, 400);
+        OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, 1600);
+        OpenTimer1(T1_ON | T1_SOURCE_INT | T1_PS_1_1, 800);
+        int CVRCON_setup;
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        CVRCON_setup = CVRCON;
+        
+
+        // Open the desired DMA channel.
+        
 	// We enable the AUTO option, we'll keep repeating the sam transfer over and over.
 	DmaChnOpen(dmaChn, 0, DMA_OPEN_AUTO);
-
-	// set the transfer parameters: source & destination address, source & destination size, number of bytes per event
-        // Setting the last parameter to one makes the DMA output one byte/interrupt
-	// DmaChnSetTxfer(dmaChn, LED_pattern, (void*)&LATA, sizeof(LED_pattern), 1, 1);
-       DmaChnSetTxfer(dmaChn, sine_table, (void*)&LATA, sizeof(sine_table), 1, sizeof(sine_table));
-
-	// set the transfer event control: what event is to start the DMA transfer
-        // In this case, timer3 
+    DmaChnSetTxfer(dmaChn, sine_table, (void*)&CVRCON, sine_table_size, 1, 1);
 	DmaChnSetEventControl(dmaChn, DMA_EV_START_IRQ(_TIMER_3_IRQ));
-	DmaChnEnable(dmaChn);
-    
-    // set up the Vref pin and use as a DAC
-        // enable module| eanble output | use low range output | use internal reference | desired step
-        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
-        // And read back setup from CVRCON for speed later
-        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
-        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
 
-    OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, 400); //125
+    DmaChnOpen(dmaChn2, 0, DMA_OPEN_AUTO);
+    DmaChnSetTxfer(dmaChn2, sine_table, (void*)&CVRCON, sine_table_size, 1, 1);
+	DmaChnSetEventControl(dmaChn2, DMA_EV_START_IRQ(_TIMER_4_IRQ));
     
-    // set up the timer interrupt with a priority of 2
-         ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_2);
-        mT3ClearIntFlag(); // and clear the interrupt flag
-
-        // Fout = incr*Fs/(2^32)
-        // Or incr = Fout*(2^32)/Fs
-        // With Fs = 1e5 (100kHz)
-        // incr = Fout * 42949.67
-        // middle C is 261.6 Hz so incr=11235641
-        incr = 11235641 ; // 261.6 Hz
-        // incr = 0x20000000 ; // for documenting the ISR rate
-        
-        
+    DmaChnOpen(dmaChn3, 0, DMA_OPEN_AUTO);
+    DmaChnSetTxfer(dmaChn3, sine_table, (void*)&CVRCON, sine_table_size, 1, 1);
+	DmaChnSetEventControl(dmaChn3, DMA_EV_START_IRQ(_TIMER_1_IRQ));
+    
     // the ADC ///////////////////////////////////////
         // configure and enable the ADC
 	CloseADC10();	// ensure the ADC is off before setting the configuration
