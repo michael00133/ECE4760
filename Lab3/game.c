@@ -14,7 +14,6 @@
 //extra libraries and defines
 #include <math.h>
 #include <stdint.h>
-#include <plib.h>
 
 // Threading Library
 // config.h sets SYSCLK 40 MHz
