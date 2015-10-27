@@ -30,7 +30,7 @@
 // for guarding the UART and for allowing stread blink control
 static struct pt_sem control_t1, control_t2, send_sem ;
 // thread control structs
-static struct pt pt1, pt2, pt3, pt4, pt_input, pt_output,pt_adc ;
+static struct pt pt1, pt2, pt3, pt4, pt_input, pt_output ;
 // turn threads 1 and 2 on/off and set timing
 int cntl_blink = 1 ;
 static int wait_t1 = 1000 ;// mSec
@@ -57,6 +57,10 @@ volatile int adc_9;
 volatile int milliSec ;
 void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
 {
+    // read the ADC from pin 24 (AN11)
+    // read the first buffer position
+    adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
+    AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
     // clear the interrupt flag
     mT2ClearIntFlag();
     // keep time
@@ -280,28 +284,7 @@ static PT_THREAD (protothread4(struct pt *pt))
   PT_END(pt);
 } // thread 4
 
-	// === ADC Thread =============================================
-// 
 
-static PT_THREAD (protothread_adc(struct pt *pt))
-{
-    PT_BEGIN(pt);
- 
-             
-    while(1) {
-        // yield time 1 second
-        PT_YIELD_TIME_msec(2);
-        
-        // read the ADC from pin 24 (AN11)
-        // read the first buffer position
-        adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
-        AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
- 
-        
-        // NEVER exit while
-      } // END WHILE(1)
-  PT_END(pt);
-} // ADC
 
 // === Main  ======================================================
 // set up UART, timer2, threads
@@ -399,7 +382,6 @@ int main(void)
   while(1) {
     PT_SCHEDULE(protothread1(&pt1));
     PT_SCHEDULE(protothread2(&pt2));
-    PT_SCHEDULE(protothread_adc(&pt_adc));
     if (run_t4) PT_SCHEDULE(protothread4(&pt4));
     if (cmd[0] != 'k') PT_SCHEDULE(protothread3(&pt3));
   }
