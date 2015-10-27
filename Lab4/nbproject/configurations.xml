@@ -8,7 +8,6 @@
       <itemPath>lc-switch.h</itemPath>
       <itemPath>lc.h</itemPath>
       <itemPath>pt.h</itemPath>
-      <itemPath>pt_cornell_TFT.h</itemPath>
       <itemPath>tft_gfx.h</itemPath>
       <itemPath>tft_master.h</itemPath>
       <itemPath>pt-sem.h</itemPath>
