@@ -24,6 +24,7 @@
 #define crlf     putchar(0x0a); putchar(0x0d);
 #define backspace 0x7f // make sure your backspace matches this!
 #define max_chars 32 // for input buffer
+#define timer2rate 30000 //ticks per 1msec
 
 // === thread structures ============================================
 // semaphores for controlling two threads
@@ -57,10 +58,7 @@ volatile int adc_9;
 volatile int milliSec ;
 void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
 {
-    // read the ADC from pin 24 (AN11)
-    // read the first buffer position
-    adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
-    AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
+   
     // clear the interrupt flag
     mT2ClearIntFlag();
     // keep time
@@ -71,6 +69,17 @@ void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
 long long uSec(void)
 {
     return (long long)milliSec * 1000 + (long long)ReadTimer2()/30 ;
+}
+
+//===================== Capture ISR =============== //
+void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void) {
+     // read the ADC from pin 24 (AN11)
+    // read the first buffer position
+    adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
+    AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
+     mPORTBToggleBits(BIT_0);
+     // clear the timer interrupt flag
+     mIC1ClearIntFlag();
 }
 
 //====================================================================
@@ -284,6 +293,13 @@ static PT_THREAD (protothread4(struct pt *pt))
   PT_END(pt);
 } // thread 4
 
+static PT_THREAD (protothread_rpm(struct pt *pt))
+{
+    PT_BEGIN(pt);
+    
+
+  PT_END(pt);
+} // calculate rpm
 
 
 // === Main  ======================================================
@@ -312,7 +328,7 @@ int main(void)
   // ===Set up timer2 ======================
   // timer 2: on,  interrupts, internal clock, prescalar 1, toggle rate
   // run at 30000 ticks is 1 mSec
-  OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 30000);
+  OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, timer2rate);
   // set up the timer interrupt with a priority of 2
   ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
   mT2ClearIntFlag(); // and clear the interrupt flag
@@ -320,6 +336,14 @@ int main(void)
   milliSec = 0;
   // setup system wide interrupts  
   INTEnableSystemMultiVectoredInt();
+  
+  // === set up comparator =================
+    // initialize the comparator
+    CMP1Open(CMP_ENABLE | CMP_OUTPUT_ENABLE | CMP1_NEG_INPUT_IVREF);
+    // initialize the input capture, uses timer2
+    OpenCapture1( IC_EVERY_RISE_EDGE | IC_FEDGE_RISE | IC_INT_1CAPTURE | IC_TIMER2_SRC | IC_ON);
+    ConfigIntCapture1(IC_INT_ON | IC_INT_PRIOR_3 | IC_INT_SUB_PRIOR_3 );
+    INTClearFlag(INT_IC1);
 
   // === set up i/o port pin ===============
   mPORTASetBits(BIT_0 | BIT_1 );	//Clear bits to ensure light is off.
@@ -327,6 +351,11 @@ int main(void)
   mPORTBSetBits(BIT_0 );	//Clear bits to ensure light is off.
   mPORTBSetPinsDigitalOut(BIT_0 );    //Set port as output
 
+    // initialize the input/output I/O
+    mPORTBSetPinsDigitalOut(BIT_3);
+    mPORTBClearBits(BIT_3);
+    PPSOutput(4, RPB9, C1OUT);		//set up output of comparator for debugging
+    PPSInput(3, IC1, RPB13);		//Either Pin 6 or Pin 24 idk
   
     // the ADC ///////////////////////////////////////
         // configure and enable the ADC
