@@ -30,7 +30,7 @@
 // for guarding the UART and for allowing stread blink control
 static struct pt_sem control_t1, control_t2, send_sem ;
 // thread control structs
-static struct pt pt1, pt2, pt3, pt4, pt_input, pt_output ;
+static struct pt pt1, pt2, pt3, pt4, pt_input, pt_output,pt_adc ;
 // turn threads 1 and 2 on/off and set timing
 int cntl_blink = 1 ;
 static int wait_t1 = 1000 ;// mSec
@@ -399,6 +399,7 @@ int main(void)
   while(1) {
     PT_SCHEDULE(protothread1(&pt1));
     PT_SCHEDULE(protothread2(&pt2));
+    PT_SCHEDULE(protothread_adc(&pt_adc));
     if (run_t4) PT_SCHEDULE(protothread4(&pt4));
     if (cmd[0] != 'k') PT_SCHEDULE(protothread3(&pt3));
   }
