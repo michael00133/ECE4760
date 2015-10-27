@@ -37,6 +37,8 @@ static int wait_t1 = 1000 ;// mSec
 // control thread 4
 static int wait_t2 = 500 ;// mSec
 static int run_t4 = 1 ;
+//ADC value
+volatile int adc_9;
 
 // macro to time a thread execution interveal
 #define PT_YIELD_TIME(delay_time) \
@@ -259,6 +261,8 @@ static PT_THREAD (protothread3(struct pt *pt))
   PT_END(pt);
 } // thread 3
 
+	
+	
 // === Thread 4 ======================================================
 // just blinks
 static PT_THREAD (protothread4(struct pt *pt))
@@ -276,6 +280,28 @@ static PT_THREAD (protothread4(struct pt *pt))
   PT_END(pt);
 } // thread 4
 
+	// === ADC Thread =============================================
+// 
+
+static PT_THREAD (protothread_adc(struct pt *pt))
+{
+    PT_BEGIN(pt);
+ 
+             
+    while(1) {
+        // yield time 1 second
+        PT_YIELD_TIME_msec(2);
+        
+        // read the ADC from pin 24 (AN11)
+        // read the first buffer position
+        adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
+        AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
+ 
+        
+        // NEVER exit while
+      } // END WHILE(1)
+  PT_END(pt);
+} // ADC
 
 // === Main  ======================================================
 // set up UART, timer2, threads
@@ -318,6 +344,45 @@ int main(void)
   mPORTBSetBits(BIT_0 );	//Clear bits to ensure light is off.
   mPORTBSetPinsDigitalOut(BIT_0 );    //Set port as output
 
+  
+    // the ADC ///////////////////////////////////////
+        // configure and enable the ADC
+	CloseADC10();	// ensure the ADC is off before setting the configuration
+
+	// define setup parameters for OpenADC10
+	// Turn module on | ouput in integer | trigger mode auto | enable autosample
+        // ADC_CLK_AUTO -- Internal counter ends sampling and starts conversion (Auto convert)
+        // ADC_AUTO_SAMPLING_ON -- Sampling begins immediately after last conversion completes; SAMP bit is automatically set
+        // ADC_AUTO_SAMPLING_OFF -- Sampling begins with AcquireADC10();
+        #define PARAM1  ADC_FORMAT_INTG16 | ADC_CLK_AUTO | ADC_AUTO_SAMPLING_OFF //
+
+	// define setup parameters for OpenADC10
+	// ADC ref external  | disable offset test | disable scan mode | do 1 sample | use single buf | alternate mode off
+	#define PARAM2  ADC_VREF_AVDD_AVSS | ADC_OFFSET_CAL_DISABLE | ADC_SCAN_OFF | ADC_SAMPLES_PER_INT_1 | ADC_ALT_BUF_OFF | ADC_ALT_INPUT_OFF
+        //
+	// Define setup parameters for OpenADC10
+        // use peripherial bus clock | set sample time | set ADC clock divider
+        // ADC_CONV_CLK_Tcy2 means divide CLK_PB by 2 (max speed)
+        // ADC_SAMPLE_TIME_5 seems to work with a source resistance < 1kohm
+        #define PARAM3 ADC_CONV_CLK_PB | ADC_SAMPLE_TIME_5 | ADC_CONV_CLK_Tcy2 //ADC_SAMPLE_TIME_15| ADC_CONV_CLK_Tcy2
+
+	// define setup parameters for OpenADC10
+	// set AN11 and  as analog inputs
+	#define PARAM4	ENABLE_AN11_ANA // pin 24
+
+	// define setup parameters for OpenADC10
+	// do not assign channels to scan
+	#define PARAM5	SKIP_SCAN_ALL
+
+	// use ground as neg ref for A | use AN11 for input A     
+	// configure to sample AN11 
+	SetChanADC10( ADC_CH0_NEG_SAMPLEA_NVREF | ADC_CH0_POS_SAMPLEA_AN11 ); // configure to sample AN4 
+	OpenADC10( PARAM1, PARAM2, PARAM3, PARAM4, PARAM5 ); // configure ADC using the parameters defined above
+
+	EnableADC10(); // Enable the ADC
+  ///////////////////////////////////////////////////////  
+  
+  
   // === now the threads ====================
   // init  the thread control semaphores
   PT_SEM_INIT(&control_t1, 0); // start blocked
