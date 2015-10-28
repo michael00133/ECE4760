@@ -25,7 +25,7 @@
 #define crlf     putchar(0x0a); putchar(0x0d);
 #define backspace 0x7f // make sure your backspace matches this!
 #define max_chars 32 // for input buffer
-#define timer2rate 625000 //ticks per 1msec
+#define timer2rate 62500 //ticks per 1sec
 
 static struct pt pt_timer, pt3, pt_input, pt_output;
 char buffer[60];
@@ -44,8 +44,13 @@ int timeElapsed =0 ;
 // ipl2 means "interrupt priority level 2"
 // ASM output is 47 instructions for the ISR
 
-
-
+void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
+{
+    // clear the interrupt flag
+    mT2ClearIntFlag();
+    // toggle bit
+    mPORTAToggleBits(BIT_0);
+}
 
 //===================== Capture ISR =============== //
 void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void) {
@@ -133,7 +138,9 @@ void main(void) {
 // === init the USART i/o pins =========
   PPSInput (2, U2RX, RPB11); //Assign U2RX to pin RPB11 -- Physical pin 22 on 28 PDIP
   PPSOutput(4, RPB10, U2TX); //Assign U2TX to pin RPB10 -- Physical pin 21 on 28 PDIP
-
+mPORTASetBits(BIT_0);
+      mPORTASetPinsDigitalOut(BIT_0);
+    
     
 
   // === init the uart2 ===================
