@@ -37,7 +37,7 @@ volatile int capcount=1;
  int rpm;
 //The actual period of the wave
 int generate_period = 16383 ;
-int pwm_on_time = 10 ;
+int pwm_on_time = 100 ;
 
 int score = 0;
 int timeElapsed =0 ;
@@ -70,7 +70,12 @@ static PT_THREAD (protothread_timer (struct pt *pt))
           
         rpm= (timer2rate/capture1)*(60/7)*capcount;  
         WriteTimer2(0); 
-        capcount=0;
+        capcount=1;
+        
+        //pwm_on_time+=100;
+        if (pwm_on_time++ >= generate_period) pwm_on_time = 0;
+       // SetDCOC3PWM(pwm_on_time);
+        
         int minutes = timeElapsed/60;
         int seconds = timeElapsed%60;
         // draw sys_time
@@ -143,17 +148,23 @@ mPORTASetBits(BIT_0);
   UARTEnable(UART2, UART_ENABLE_FLAGS(UART_PERIPHERAL | UART_RX | UART_TX));
  
   printf("protothreads start..\n\r");
-    
+      // setup system wide interrupts  
+  INTEnableSystemMultiVectoredInt();
   // ===Set up timer2 ======================
   // timer 2: on,  interrupts, internal clock, prescalar 1, toggle rate
   // run at 30000 ticks is 1 mSec
   OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_64, 0xffffffff);
   // set up the timer interrupt with a priority of 2
- // ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
+ //ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
   mT2ClearIntFlag(); // and clear the interrupt flag
 
-  // setup system wide interrupts  
-  INTEnableSystemMultiVectoredInt();
+
+  // === Config timer and output compares to make pulses ========
+  // set up timer3 to generate the wave period
+  OpenTimer4(T3_ON | T3_SOURCE_INT | T3_PS_1_1, generate_period);
+ // ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_2);
+  mT3ClearIntFlag(); // and clear the interrupt flag
+  
   
 // set up compare3 for PWM mode
   OpenOC3(OC_ON | OC_TIMER3_SRC | OC_PWM_FAULT_PIN_DISABLE , pwm_on_time, pwm_on_time); //
@@ -161,11 +172,7 @@ mPORTASetBits(BIT_0);
   PPSOutput(4, RPB9, OC3);
  // mPORTASetPinsDigitalOut(BIT_3);    //Set port as output -- not needed
 
-// === Config timer and output compares to make pulses ========
-  // set up timer3 to generate the wave period
-  OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, generate_period);
-  ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_2);
-  mT3ClearIntFlag(); // and clear the interrupt flag
+
 
 
     // initialize the input capture, uses timer2
