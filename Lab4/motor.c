@@ -35,22 +35,15 @@ volatile unsigned int capture1 = 0;
 volatile int capcount=1;
 // rpm
  int rpm;
+//The actual period of the wave
+int generate_period = 16383 ;
+int pwm_on_time = 10 ;
 
 int score = 0;
 int timeElapsed =0 ;
 
 //====================================================================
-// === Timer 2 interrupt handler =====================================
-// ipl2 means "interrupt priority level 2"
-// ASM output is 47 instructions for the ISR
 
-void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
-{
-    // clear the interrupt flag
-    mT2ClearIntFlag();
-    // toggle bit
-    mPORTAToggleBits(BIT_0);
-}
 
 //===================== Capture ISR =============== //
 void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void) {
@@ -162,7 +155,18 @@ mPORTASetBits(BIT_0);
   // setup system wide interrupts  
   INTEnableSystemMultiVectoredInt();
   
-  // === set up comparator =================
+// set up compare3 for PWM mode
+  OpenOC3(OC_ON | OC_TIMER3_SRC | OC_PWM_FAULT_PIN_DISABLE , pwm_on_time, pwm_on_time); //
+  // OC3 is PPS group 4, map to RPB9 (pin 18)
+  PPSOutput(4, RPB9, OC3);
+ // mPORTASetPinsDigitalOut(BIT_3);    //Set port as output -- not needed
+
+// === Config timer and output compares to make pulses ========
+  // set up timer3 to generate the wave period
+  OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, generate_period);
+  ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_2);
+  mT3ClearIntFlag(); // and clear the interrupt flag
+
 
     // initialize the input capture, uses timer2
     OpenCapture1( IC_EVERY_FALL_EDGE | IC_FEDGE_FALL | IC_INT_1CAPTURE | IC_CAP_32BIT  |IC_TIMER2_SRC | IC_ON);
