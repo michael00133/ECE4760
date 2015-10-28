@@ -25,16 +25,16 @@
 #define crlf     putchar(0x0a); putchar(0x0d);
 #define backspace 0x7f // make sure your backspace matches this!
 #define max_chars 32 // for input buffer
-#define timer2rate 30000 //ticks per 1msec
+#define timer2rate 625000 //ticks per 1msec
 
 static struct pt pt_timer, pt3, pt_input, pt_output;
 char buffer[60];
 
 // Number of ticks
-volatile int capture1 = 0;
-int capcount=0;
+volatile unsigned int capture1 = 0;
+volatile int capcount=1;
 // rpm
-volatile int rpm;
+ int rpm;
 
 int score = 0;
 int timeElapsed =0 ;
@@ -43,32 +43,21 @@ int timeElapsed =0 ;
 // === Timer 2 interrupt handler =====================================
 // ipl2 means "interrupt priority level 2"
 // ASM output is 47 instructions for the ISR
-volatile int milliSec ;
-void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
-{
-   
-    // clear the interrupt flag
-    mT2ClearIntFlag();
-    // keep time
-    milliSec++ ;
-}
 
-// estimate microSec since start up
-long long uSec(void)
-{
-    return (long long)milliSec * 1000 + (long long)ReadTimer2()/30 ;
-}
+
+
 
 //===================== Capture ISR =============== //
 void __ISR(_INPUT_CAPTURE_1_VECTOR, ipl3) C1Handler(void) {
      capture1 = mIC1ReadCapture();
-     
-     rpm= (timer2rate/capture1)*(60000/7)*capcount;
+      //WriteTimer2(0); 
+      
+
          //Clear timer and sets pin 7 as input
-     if (capcount>7){
-        WriteTimer2(0); 
-        capcount=0;
-     }
+  
+     
+     capcount++;
+
      // clear the timer interrupt flag
      mIC1ClearIntFlag();
 }
@@ -80,14 +69,17 @@ static PT_THREAD (protothread_timer (struct pt *pt))
       while(1) {
         // yield time 1 second
         
-        
+          
+        rpm= (timer2rate/capture1)*(60/7)*capcount;  
+        WriteTimer2(0); 
+        capcount=0;
         int minutes = timeElapsed/60;
         int seconds = timeElapsed%60;
         // draw sys_time
-        tft_fillRoundRect(0,10, 320, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+        tft_fillRoundRect(0,10, 320, 64, 1, ILI9340_BLACK);// x,y,w,h,radius,color
         tft_setCursor(0, 10);
         tft_setTextColor(ILI9340_WHITE); tft_setTextSize(2);
-        sprintf(buffer,"%02d:%02d RPM: %d Cap1: %d", minutes,seconds,rpm, capture1);
+        sprintf(buffer,"%02d:%02d rpm: %d", minutes,seconds, rpm);
         tft_writeString(buffer);
         
         PT_YIELD_TIME_msec(1000);
@@ -155,20 +147,18 @@ void main(void) {
   // ===Set up timer2 ======================
   // timer 2: on,  interrupts, internal clock, prescalar 1, toggle rate
   // run at 30000 ticks is 1 mSec
-  OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, timer2rate);
+  OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_64, 0xffffffff);
   // set up the timer interrupt with a priority of 2
-  ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
+ // ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
   mT2ClearIntFlag(); // and clear the interrupt flag
-  // init system time variable
-  milliSec = 0;
+
   // setup system wide interrupts  
   INTEnableSystemMultiVectoredInt();
   
   // === set up comparator =================
-    // initialize the comparator
-    CMP1Open(CMP_ENABLE | CMP_OUTPUT_ENABLE | CMP1_NEG_INPUT_IVREF);
+
     // initialize the input capture, uses timer2
-    OpenCapture1( IC_EVERY_RISE_EDGE | IC_FEDGE_RISE | IC_INT_1CAPTURE | IC_TIMER2_SRC | IC_ON);
+    OpenCapture1( IC_EVERY_FALL_EDGE | IC_FEDGE_FALL | IC_INT_1CAPTURE | IC_CAP_32BIT  |IC_TIMER2_SRC | IC_ON);
     ConfigIntCapture1(IC_INT_ON | IC_INT_PRIOR_3 | IC_INT_SUB_PRIOR_3 );
     INTClearFlag(INT_IC1);
   
