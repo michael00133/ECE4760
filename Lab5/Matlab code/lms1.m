@@ -3,7 +3,7 @@
 clear
 close all
 c=@(x) round(2^16*x)/2^16;
-order=10;
+order=5;
 
 size=2;                         %time duration of inputs
 fs=8192;                                %digital sampling frequency
@@ -26,11 +26,11 @@ subplot(4,1,1)
 plot(t,voice);
 title('voice    (don''t have access to)')
 
-noise=cos(2*pi*f2.*t.^2);                                %increasy frequency noise
+noise=cos(2*pi*f2.*t);                                %increasy frequency noise
 
 %noise=rand(1,N);                %white noise
 noise=c(noise);
-primary=voice+0.5*circshift(noise,[0 -round(0.1*fs)]);
+primary=voice+5*circshift(noise,[0 -round(0.1*fs)]);
 primary=c(primary);
 subplot(4,1,2)
 plot(t,primary)
@@ -42,14 +42,14 @@ subplot(4,1,3)
 plot(t,ref)
 title('reference  (noisy noise)   (input2)');
 
-w=zeros(order,N);
+w=zeros(order,N+1);
 mu=1;
 
 for i=order:N
    buffer = ref(i-order+1:i);                                   %current 32 points of reference
-   desired(i) = c(primary(i)-buffer*w(:,i-1));                    %dot product reference and coeffs
+   desired(i) = c(primary(i)-buffer*w(:,i));                    %dot product reference and coeffs
    %mu=(primary(i)-buffer*w(:,i-1))^2/desired(i)^2;
-   w(:,i)=c(w(:,i-1)+(buffer.*mu*desired(i)/(buffer*buffer'+0.000001))');%update coeffs
+   w(:,i+1)=c(w(:,i)+(buffer.*mu*desired(i)/(buffer*buffer'+0.000001))');%update coeffs
 end
 
 subplot(4,1,4)
