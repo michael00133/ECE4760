@@ -159,7 +159,10 @@ void main(void) {
     ConfigIntTimer4(T4_INT_ON | T4_INT_PRIOR_3);
     mT2ClearIntFlag();
         
-
+    // initialize MOSI
+    PPSOutput(2, RPB5, SDO2);			// MOSI for DAC
+    mPORTBSetPinsDigitalOut(BIT_4);		// CS for DAC
+    mPORTBSetBits(BIT_4);              // initialize CS as high
        
     
     // the ADC ///////////////////////////////////////
