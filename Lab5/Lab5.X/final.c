@@ -15,6 +15,12 @@
 #include <math.h>
 #include <stdint.h>
 
+// MDDFS (SD) Card libraries
+#include <stdio.h>
+#include "FSIO.h"
+#include "plib.h"
+#include <GenericTypeDefs.h>
+
 // Threading Library
 // config.h sets SYSCLK 40 MHz
 #define SYS_FREQ 40000000
