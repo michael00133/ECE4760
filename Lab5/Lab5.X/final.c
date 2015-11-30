@@ -47,6 +47,8 @@ typedef signed int fix16 ;
 #define notPCM              5
 #define stackSize           128     // cyclic buffer/stack
 
+#define order 5 //order of nlms filter
+
 UINT8 receiveBuffer[100];
 
 static struct pt pt_refresh,pt_adc;
@@ -55,15 +57,20 @@ volatile unsigned int DAC_data ;// output value
 volatile SpiChannel spiChn = SPI_CHANNEL2 ;	// the SPI channel to use
 volatile int spiClkDiv = 2 ; // 20 MHz max speed for this DAC
 
-int fs=44100*2; //sampling rate for ADC
+int fs=44100; //sampling rate for ADC
 char buffer[60];
 //ADC value
-volatile int adc_9;
+ int adc_9;
 int timeElapsed =0 ;
-volatile int input=0;//flag for which input ADC is reading 0 for noise, 1 for signal+noise
-int ref;
-int sig;
+ int input=0;//flag for which input ADC is reading 0 for noise, 1 for signal+noise
+ int ref[order];
+ int sig[order];
+ int weights[order];
+ int error[order];
+int output;
+int weights[order];
 
+void update(int* array, int new);
 void setupAudioPWM(void);
 void getFilename(char * buffer);
 void configureHardware(UINT32 sampleRate);
@@ -124,14 +131,13 @@ static PT_THREAD (protothread_adc(struct pt *pt))
   PT_END(pt);
 } // animation thread
 
-
 void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
     mT3ClearIntFlag();
     if (input==0) { //noise from an10
-        ref=ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer;
+        update(ref,ReadADC10(0));   // read the result of channel 9 conversion from the idle buffer;
     }
     else {
-        sig=ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
+        update(sig,ReadADC10(0));   // read the result of channel 9 conversion from the idle buffer
     }
      AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
      input=1^input;//toggle input
@@ -139,6 +145,7 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
 
 void __ISR(_TIMER_4_VECTOR, ipl3) Timer4Handler(void){
     mT2ClearIntFlag();
+    //NLMS filter 
     
     // CS low to start transaction
      mPORTBClearBits(BIT_4); // start transaction
@@ -174,7 +181,7 @@ void main(void) {
         
     //CONFIGS!!!!!!
         
-    OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, SYS_FREQ/fs);
+    OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, SYS_FREQ/(2*fs));
     ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_3);
     mT3ClearIntFlag();
     
@@ -313,4 +320,13 @@ void getParameters(UINT8 * bitsPerSample, UINT8 * numberOfChannels,
         receiveBuffer[40];
     
     *blockAlign = receiveBuffer[32];
+}
+
+// add new value to array and shift
+int i;
+void update(int* array, int new) {
+    for (i=1;i<sizeof(array);i++){
+        array[i-1]=array[i];
+    }
+    array[sizeof(array)-1]=new;
 }
