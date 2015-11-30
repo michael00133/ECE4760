@@ -48,7 +48,7 @@ typedef signed int fix16 ;
 #define stackSize           128     // cyclic buffer/stack
 
 #define order 5 //order of nlms filter
-
+#define mu 0.006 //stepsize
 UINT8 receiveBuffer[100];
 
 static struct pt pt_refresh,pt_adc;
@@ -64,12 +64,13 @@ char buffer[60];
 int timeElapsed =0 ;
  int input=0;//flag for which input ADC is reading 0 for noise, 1 for signal+noise
  int ref[order];
- int sig[order];
+ int primary;
  int weights[order];
- int error[order];
-int output;
-int weights[order];
+ int desired;
+int i;
+ 
 
+int innerproduct(int* a, int* b);
 void update(int* array, int new);
 void setupAudioPWM(void);
 void getFilename(char * buffer);
@@ -137,7 +138,7 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
         update(ref,ReadADC10(0));   // read the result of channel 9 conversion from the idle buffer;
     }
     else {
-        update(sig,ReadADC10(0));   // read the result of channel 9 conversion from the idle buffer
+        primary=ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
     }
      AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
      input=1^input;//toggle input
@@ -146,7 +147,11 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
 void __ISR(_TIMER_4_VECTOR, ipl3) Timer4Handler(void){
     mT2ClearIntFlag();
     //NLMS filter 
-    
+    desired=primary-innerproduct(ref,weights);
+    for(i=1;i<order;i++) {
+        weights[i]=(int)(weights[i]+((ref[i]*mu*desired)/(innerproduct(ref,ref)+1)));
+    }
+    DAC_data=desired;//this can be optimized
     // CS low to start transaction
      mPORTBClearBits(BIT_4); // start transaction
     // test for ready
@@ -323,10 +328,21 @@ void getParameters(UINT8 * bitsPerSample, UINT8 * numberOfChannels,
 }
 
 // add new value to array and shift
-int i;
+
 void update(int* array, int new) {
     for (i=1;i<sizeof(array);i++){
         array[i-1]=array[i];
     }
     array[sizeof(array)-1]=new;
 }
+
+int innerproduct(int* a, int* b) {
+    int sum=0;
+    if (sizeof(a)!=sizeof(b)) {
+        return 0;
+    }
+    for (i=1;i<sizeof(a);i++) {
+        sum=sum+a[i]*b[i];
+    }
+}
+
