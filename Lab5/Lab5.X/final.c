@@ -38,7 +38,16 @@ typedef signed int fix16 ;
 #define sqrtfix16(a) (float2fix16(sqrt(fix2float16(a)))) 
 #define absfix16(a) abs(a)
 
+//===== Wav File Read
+#define allGood             0
+#define incorrectHeaderSize 1
+#define riff                2
+#define wav                 3
+#define fmt                 4
+#define notPCM              5
+#define stackSize           128     // cyclic buffer/stack
 
+UINT8 receiveBuffer[100];
 
 static struct pt pt_refresh,pt_adc;
 
@@ -54,6 +63,14 @@ int timeElapsed =0 ;
 volatile int input=0;//flag for which input ADC is reading 0 for noise, 1 for signal+noise
 int ref;
 int sig;
+
+void setupAudioPWM(void);
+void getFilename(char * buffer);
+void configureHardware(UINT32 sampleRate);
+void getParameters(UINT8 * bitsPerSample, UINT8 * numberOfChannels,
+                        UINT32 * dataSize, UINT32 * sampleRate,
+                        UINT32 * blockAlign);
+
 //==================== Calculate ===================== //
 static PT_THREAD (protothread_refresh (struct pt *pt))
 {
@@ -169,7 +186,27 @@ void main(void) {
     PPSOutput(2, RPB5, SDO2);			// MOSI for DAC
     mPORTBSetPinsDigitalOut(BIT_4);		// CS for DAC
     mPORTBSetBits(BIT_4);              // initialize CS as high
-       
+    
+    //play music stuff
+     FSFILE * pointer;
+//    FSFILE * pointer2;
+//    char path[30];
+//    char count = 30;
+    SearchRec rec;
+    UINT8 attributes = ATTR_MASK;   // file can have any attributes
+
+    // audio stuff (WAV file)
+    UINT8 bitsPerSample;
+    UINT32 sampleRate;
+    UINT8 numberOfChannels;
+    UINT32 dataSize;
+    UINT8 blockAlign;
+
+    UINT8 audioStream[stackSize*4];
+    UINT16 audioByte;
+    UINT16 lc;
+    UINT16 retBytes;
+    UINT16 unsign_audio;
     
     // the ADC ///////////////////////////////////////
         // configure and enable the ADC
@@ -229,3 +266,51 @@ void main(void) {
     
 } //main
 
+UINT8 getWavHeader(FSFILE * pointer) {
+
+    if (FSfread(receiveBuffer, 1, 44, pointer) != 44) {
+        return incorrectHeaderSize;
+    }
+
+    if ( (receiveBuffer[0] != 'R') |
+            (receiveBuffer[1] != 'I') |
+            (receiveBuffer[2] != 'F') |
+            (receiveBuffer[3] != 'F') ) {
+        return riff;
+    }
+
+    if ( (receiveBuffer[8] != 'W') |
+            (receiveBuffer[9] != 'A') |
+            (receiveBuffer[10] != 'V') |
+            (receiveBuffer[11] != 'E') ) {
+        return wav;
+    }
+
+    if ( (receiveBuffer[12] != 'f') |
+            (receiveBuffer[13] != 'm') |
+            (receiveBuffer[14] != 't') ) {
+        return fmt;
+    }
+
+    if (receiveBuffer[20] != 1) {
+        return notPCM;
+    }
+
+    return allGood;         // no errors
+
+}
+
+void getParameters(UINT8 * bitsPerSample, UINT8 * numberOfChannels,
+                        UINT32 * dataSize, UINT32 * sampleRate,
+                        UINT32 * blockAlign) {
+    *bitsPerSample = receiveBuffer[34];
+    *numberOfChannels = receiveBuffer[22];
+    *sampleRate = (receiveBuffer[25] << 8) | receiveBuffer[24];
+
+    *dataSize = (receiveBuffer[43] << 24) |
+        (receiveBuffer[42] << 16) |
+        (receiveBuffer[41] << 8) |
+        receiveBuffer[40];
+    
+    *blockAlign = receiveBuffer[32];
+}
