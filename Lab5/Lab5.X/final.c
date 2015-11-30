@@ -140,11 +140,11 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
     else {
         primary=ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
     }
-     AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
-     input=1^input;//toggle input
+    AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
+    input=1^input;//toggle input
 }
 
-void __ISR(_TIMER_4_VECTOR, ipl3) Timer4Handler(void){
+void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     mT2ClearIntFlag();
     //NLMS filter 
     desired=primary-innerproduct(ref,weights);
@@ -166,13 +166,14 @@ void __ISR(_TIMER_4_VECTOR, ipl3) Timer4Handler(void){
 
 /* ADC ISR */
   /* Specify ADC Interrupt Routine, Priority Level = 6 */
+/*
  void __ISR(_ADC_VECTOR, ipl6) AdcHandler(void)
  {
       
            // clear the interrupt flag
     mAD1ClearIntFlag();
  }
-
+*/
 //===================== Main ======================= //
 void main(void) {
     //SYSTEMConfigPerformance(PBCLK);
@@ -191,7 +192,7 @@ void main(void) {
     mT3ClearIntFlag();
     
     OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, SYS_FREQ/fs);
-    ConfigIntTimer4(T4_INT_ON | T4_INT_PRIOR_3);
+    ConfigIntTimer4(T4_INT_ON | T4_INT_PRIOR_2);
     mT2ClearIntFlag();
         
     // initialize MOSI
