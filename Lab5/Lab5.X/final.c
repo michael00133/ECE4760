@@ -50,12 +50,14 @@ typedef signed int fix16 ;
 #define order 5 //order of nlms filter
 #define mu 0.006 //stepsize
 UINT8 receiveBuffer[100];
+char txtBuffer[100];
 
 static struct pt pt_refresh,pt_adc;
 
 volatile unsigned int DAC_data ;// output value
 volatile SpiChannel spiChn = SPI_CHANNEL2 ;	// the SPI channel to use
 volatile int spiClkDiv = 2 ; // 20 MHz max speed for this DAC
+volatile UINT32 j = 0;
 
 int fs=44100; //sampling rate for ADC
 char buffer[60];
@@ -70,7 +72,7 @@ int timeElapsed =0 ;
 int i;
  
 
-int innerproduct(int* a, int* b);
+int  innerproduct(int* a, int* b);
 void update(int* array, int new);
 void setupAudioPWM(void);
 void getFilename(char * buffer);
@@ -220,6 +222,45 @@ void main(void) {
     UINT16 lc;
     UINT16 retBytes;
     UINT16 unsign_audio;
+    
+    // Reading from microSD Card
+    ANSELA = 0; ANSELB = 0;                 // Disable analog inputs
+    CM1CON = 0; CM2CON = 0; CM3CON = 0;     // Disable analog comparators
+    //TRISACLR = 1;                           // RA0 for LED
+
+    tft_setCursor(10, 50);
+    tft_setTextColor(ILI9340_YELLOW);  tft_setTextSize(3);
+    tft_writeString("\n\rLooking to detect media...\n\r");
+    while (!MDD_MediaDetect());
+    tft_writeString("Found media!\n\r");
+
+    tft_writeString("\n\rInitializing library...\n\r");
+    // Initialize the library
+    while (!FSInit());
+    tft_writeString("Initialized library!\n\r");
+
+    tft_writeString("\n\rShowing all WAV files in root directory:\n\r");
+    if (FindFirst("*.WAV", attributes, &rec) == 0) { // file found
+        sprintf(buffer,"%s\t%u KB\n\r", rec.filename, rec.filesize/1000);
+        tft_writeString(buffer);
+        while (FindNext(&rec) == 0) { // more files found
+            sprintf(buffer,"%s\t%u KB\n\r", rec.filename, rec.filesize/1000);
+            tft_writeString(buffer);
+        }
+    }
+
+    // GET FILE NAME TO PLAY
+    j = 0;
+    while (j == 0) {
+        tft_writeString("\n\rSelect which file to play\n\r");
+        getFilename(&txtBuffer);
+        if (FindFirst(txtBuffer, attributes, &rec)) {
+            tft_writeString("Invalid file! Try again!\n\r");
+        }
+        else {
+            j = 1;
+        }
+    }
     
     // the ADC ///////////////////////////////////////
         // configure and enable the ADC
