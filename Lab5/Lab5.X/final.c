@@ -243,7 +243,7 @@ void main(void) {
         #define PARAM3 ADC_CONV_CLK_PB | ADC_SAMPLE_TIME_5 | ADC_CONV_CLK_Tcy2 //ADC_SAMPLE_TIME_15| ADC_CONV_CLK_Tcy2
 
 	// define setup parameters for OpenADC10
-	// set AN11 and  as analog inputs
+	// set AN11(pin 24) and AN5(pin 7) as analog inputs
 	#define PARAM4	ENABLE_AN11_ANA | ENABLE_AN5_ANA// pin 24
 
 	// define setup parameters for OpenADC10
