@@ -279,6 +279,43 @@ void main(void) {
     
 } //main
 
+void getFilename(char * buffer) {
+#define maxChars        20
+#define _BACKSPACE_     8
+
+    char c = 32;    // 32 = space
+    INT8 bufferCounter = 0;
+
+    while (DataRdyUART2() == 0);
+    c = getcUART2();
+
+    while ((c!= 10) & (c!= 13)) {
+
+        putcUART2(c);
+        while (DataRdyUART2() == 0);
+
+        *(buffer + bufferCounter) = c;
+
+        if (c == _BACKSPACE_) {
+            if (bufferCounter > 1) {
+                bufferCounter-=2;
+            }
+            else {
+                bufferCounter = 0;
+            }
+        }
+
+        if (++bufferCounter == maxChars)
+            break;
+
+        c = getcUART2();
+    }
+
+    printf("\n\r");
+
+    *(buffer + bufferCounter) = '\0';   // terminate string
+}
+
 UINT8 getWavHeader(FSFILE * pointer) {
 
     if (FSfread(receiveBuffer, 1, 44, pointer) != 44) {
