@@ -188,7 +188,8 @@ void main(void) {
     //SYSTEMConfigPerformance(PBCLK);
 	SYSTEMConfig(SYS_FREQ, SYS_CFG_WAIT_STATES | SYS_CFG_PCACHE);
     
-    ANSELA = 0; ANSELB = 0; CM1CON = 0; CM2CON = 0;
+    ANSELA = 0; ANSELB = 0; // Disable analog inputs
+    CM1CON = 0; CM2CON = 0; CM3CON = 0;     // Disable analog comparators
 
     PT_setup();
     
@@ -215,26 +216,22 @@ void main(void) {
 //    char path[30];
 //    char count = 30;
     SearchRec rec;
-    UINT8 attributes = ATTR_MASK;   // file can have any attributes
+    UINT8  attributes = ATTR_MASK;   // file can have any attributes
 
     // audio stuff (WAV file)
-    UINT8 bitsPerSample;
+    UINT8  bitsPerSample;
     UINT32 sampleRate;
-    UINT8 numberOfChannels;
+    UINT8  numberOfChannels;
     UINT32 dataSize;
-    UINT8 blockAlign;
+    UINT8  blockAlign;
 
-    UINT8 audioStream[stackSize*4];
+    UINT8  audioStream[stackSize*4];
     UINT16 audioByte;
     UINT16 lc;
     UINT16 retBytes;
     UINT16 unsign_audio;
     
     // Reading from microSD Card
-    ANSELA = 0; ANSELB = 0;                 // Disable analog inputs
-    CM1CON = 0; CM2CON = 0; CM3CON = 0;     // Disable analog comparators
-    //TRISACLR = 1;                           // RA0 for LED
-
     tft_setCursor(10, 50);
     tft_setTextColor(ILI9340_YELLOW);  tft_setTextSize(3);
     tft_writeString("\n\rLooking to detect media...\n\r");
