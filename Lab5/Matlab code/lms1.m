@@ -3,7 +3,7 @@
 clear
 close all
 c=@(x) round(2^16*x)/2^16;
-order=5;
+order=10;
 
 size=2;                         %time duration of inputs
 fs=8192;                                %digital sampling frequency
@@ -26,11 +26,11 @@ subplot(4,1,1)
 plot(t,voice);
 title('voice    (don''t have access to)')
 
-noise=cos(2*pi*f2.*t);                                %increasy frequency noise
+noise=cos(2*pi*f2.*t.^2);                                %increasy frequency noise
 
 %noise=rand(1,N);                %white noise
 noise=c(noise);
-primary=voice+5*circshift(noise,[0 -round(0.1*fs)]);
+primary=voice+1*circshift(noise,[0 -round(0.1*fs)]);
 primary=c(primary);
 subplot(4,1,2)
 plot(t,primary)
@@ -48,6 +48,7 @@ mu=1;
 for i=order:N
    buffer = ref(i-order+1:i);                                   %current 32 points of reference
    desired(i) = c(primary(i)-buffer*w(:,i));                    %dot product reference and coeffs
+   p(i)=buffer*w(:,i);
    %mu=(primary(i)-buffer*w(:,i-1))^2/desired(i)^2;
    w(:,i+1)=c(w(:,i)+(buffer.*mu*desired(i)/(buffer*buffer'+0.000001))');%update coeffs
 end
@@ -56,4 +57,5 @@ subplot(4,1,4)
 plot(t(order:N),desired(order:N))
 title('Adaptive output  (hopefully it''s close to "voice")')
 
-
+figure;
+plot(t(order:N),noise(order:N),t(order:N),p(order:N));

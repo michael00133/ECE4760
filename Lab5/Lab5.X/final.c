@@ -47,7 +47,7 @@ typedef signed int fix16 ;
 #define notPCM              5
 #define stackSize           128     // cyclic buffer/stack
 
-#define order 5 //order of nlms filter
+#define order 10 //order of nlms filter
 #define mu 0.006 //stepsize
 UINT8 receiveBuffer[100];
 char txtBuffer[100];
@@ -65,7 +65,7 @@ char buffer[60];
  int adc_9;
 int timeElapsed =1;
  int input=0;//flag for which input ADC is reading 0 for noise, 1 for signal+noise
- //start with 1 for primary in muxA
+ //primary in pin 24(muxA) ref in pin 7(muxB)
  int ref[order];
  int primary;
  int weights[order];
@@ -146,6 +146,8 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
     }
     */
     primary=ReadADC10(0);
+    update(ref,ReadADC10(1));
+    
     AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
     input=1^input;//toggle input
 }
@@ -157,7 +159,8 @@ void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     for(i=1;i<order;i++) {
         weights[i]=(int)(weights[i]+((ref[i]*mu*desired)/(innerproduct(ref,ref)+1)));
     }
-    DAC_data=desired;//this can be optimized
+    //DAC_data=song-desired;
+    DAC_data=desired;
     // CS low to start transaction
      mPORTBClearBits(BIT_4); // start transaction
     // test for ready
@@ -275,11 +278,11 @@ void main(void) {
         // ADC_CLK_AUTO -- Internal counter ends sampling and starts conversion (Auto convert)
         // ADC_AUTO_SAMPLING_ON -- Sampling begins immediately after last conversion completes; SAMP bit is automatically set
         // ADC_AUTO_SAMPLING_OFF -- Sampling begins with AcquireADC10();
-        #define PARAM1  ADC_FORMAT_INTG16 | ADC_CLK_AUTO | ADC_AUTO_SAMPLING_ON //
+        #define PARAM1  ADC_FORMAT_INTG16 | ADC_CLK_AUTO | ADC_AUTO_SAMPLING_OFF //
 
 	// define setup parameters for OpenADC10
 	// ADC ref external  | disable offset test | disable scan mode | do 1 sample | use single buf | alternate mode off
-	#define PARAM2  ADC_VREF_AVDD_AVSS | ADC_OFFSET_CAL_DISABLE | ADC_SCAN_ON | ADC_SAMPLES_PER_INT_2 | ADC_ALT_BUF_OFF | ADC_ALT_INPUT_OFF
+	#define PARAM2  ADC_VREF_AVDD_AVSS | ADC_OFFSET_CAL_DISABLE | ADC_SCAN_OFF | ADC_SAMPLES_PER_INT_2 | ADC_ALT_BUF_OFF | ADC_ALT_INPUT_ON
         //
 	// Define setup parameters for OpenADC10
         // use peripherial bus clock | set sample time | set ADC clock divider
@@ -290,15 +293,16 @@ void main(void) {
 	// define setup parameters for OpenADC10
 	// set AN11(pin 24) and AN5(pin 7) as analog inputs
 	//#define PARAM4	ENABLE_AN5_ANA | ENABLE_AN11_ANA// pin 24
-    #define PARAM4	ENABLE_AN5_ANA | ENABLE_AN11_ANA
+    #define PARAM4	ENABLE_AN11_ANA | ENABLE_AN5_ANA
 	// define setup parameters for OpenADC10
 	// do not assign channels to scan
-	#define PARAM5	SKIP_SCAN_AN0 | SKIP_SCAN_AN1 |SKIP_SCAN_AN2 |SKIP_SCAN_AN2 |SKIP_SCAN_AN4 |SKIP_SCAN_AN6 |SKIP_SCAN_AN7 |SKIP_SCAN_AN8 |SKIP_SCAN_AN9 |SKIP_SCAN_AN10 |SKIP_SCAN_AN12 
+    #define PARAM5 SKIP_SCAN_ALL
+	//#define PARAM5	SKIP_SCAN_AN0 | SKIP_SCAN_AN1 |SKIP_SCAN_AN2 |SKIP_SCAN_AN2 |SKIP_SCAN_AN4 |SKIP_SCAN_AN6 |SKIP_SCAN_AN7 |SKIP_SCAN_AN8 |SKIP_SCAN_AN9 |SKIP_SCAN_AN10 |SKIP_SCAN_AN12 
 
 	// use ground as neg ref for A | use AN11 for input A     
 	// configure to sample AN11 
-	//SetChanADC10( ADC_CH0_NEG_SAMPLEA_NVREF | ADC_CH0_POS_SAMPLEA_AN5 | ADC_CH0_NEG_SAMPLEB_NVREF | ADC_CH0_POS_SAMPLEB_AN11  ); // configure to sample AN4 
-	SetChanADC10(ADC_CH0_NEG_SAMPLEB_NVREF | ADC_CH0_POS_SAMPLEB_AN5); // configure to sample AN4 
+	SetChanADC10( ADC_CH0_NEG_SAMPLEA_NVREF | ADC_CH0_POS_SAMPLEA_AN11 | ADC_CH0_NEG_SAMPLEB_NVREF | ADC_CH0_POS_SAMPLEB_AN5  ); // configure to sample AN4 
+	//SetChanADC10(ADC_CH0_NEG_SAMPLEB_NVREF | ADC_CH0_POS_SAMPLEB_AN5); // configure to sample AN4 
 	OpenADC10( PARAM1, PARAM2, PARAM3, PARAM4, PARAM5 ); // configure ADC using the parameters defined above
 
 	EnableADC10(); // Enable the ADC
