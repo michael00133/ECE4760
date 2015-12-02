@@ -265,7 +265,7 @@ void main(void) {
             getParameters(&bitsPerSample, &numberOfChannels, &dataSize,
                             &sampleRate, &blockAlign);
             
-            //config hardware
+            //config hardware using sample rate
             PR2 = (PB_CLK/sampleRate) - 1;
             mT2IntEnable(1);
 
@@ -347,7 +347,7 @@ void main(void) {
     mT2ClearIntFlag();
     
     // the ADC ///////////////////////////////////////
-        // configure and enable the ADC
+    // configure and enable the ADC
 	CloseADC10();	// ensure the ADC is off before setting the configuration
 
 	// define setup parameters for OpenADC10
