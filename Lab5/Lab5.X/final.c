@@ -258,7 +258,7 @@ void main(void) {
     pointer = FSfopen("music.wav","r");
     if (pointer != NULL) {
 
-      //  printf("Opened \"%s\"\n\r\n\r",txtBuffer);
+      //printf("Opened \"%s\"\n\r\n\r",txtBuffer);
 
         if (getWavHeader(pointer) == allGood) {
             
@@ -346,6 +346,8 @@ void main(void) {
     mT2IntEnable(0);
     mT2ClearIntFlag();
     
+    TOC = msCounter - TIC;
+    
     // the ADC ///////////////////////////////////////
     // configure and enable the ADC
 	CloseADC10();	// ensure the ADC is off before setting the configuration
@@ -405,6 +407,17 @@ void main(void) {
     }
     
 } //main
+
+// Timer2, write value from audio file to the DAC
+void __ISR(_TIMER_2_VECTOR, ipl2) T2int (void) {
+    // writeDac(LSTACK[TOS]);  Write to the DAC LSTACK[TOS]
+    // writeDac(RSTACK[TOS]);  Write to the DAC RSTACK[TOS]
+    
+    if (++TOS == stackSize)
+        TOS = 0;
+
+    mT2ClearIntFlag();
+}
 
 void getFilename(char * buffer) {
 #define maxChars        20
