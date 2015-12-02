@@ -31,6 +31,7 @@ noise=cos(2*pi*f2.*t.^2);                                %increasy frequency noi
 %noise=rand(1,N);                %white noise
 noise=c(noise);
 primary=voice+1*circshift(noise,[0 -round(0.1*fs)]);
+primary=voice;
 primary=c(primary);
 subplot(4,1,2)
 plot(t,primary)

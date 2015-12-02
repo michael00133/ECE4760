@@ -221,6 +221,8 @@ void main(void) {
     mPORTBSetPinsDigitalOut(BIT_4);		// CS for DAC
     mPORTBSetBits(BIT_4);              // initialize CS as high
     
+    
+    /*
     //play music stuff
     FSFILE * pointer;
     SearchRec rec;
@@ -342,7 +344,7 @@ void main(void) {
     mT2ClearIntFlag();
     
     TOC = msCounter - TIC;
-    
+    */
     // the ADC ///////////////////////////////////////
     // configure and enable the ADC
 	CloseADC10();	// ensure the ADC is off before setting the configuration
