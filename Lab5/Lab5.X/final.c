@@ -64,7 +64,7 @@ volatile UINT32 bufferCounter = 0;
 volatile UINT32 intCounter = 0;
 
 
-#define order 10 //order of nlms filter
+#define order 5 //order of nlms filter
 #define mu 0.006 //stepsize
 UINT8 receiveBuffer[100];
 char txtBuffer[100];
@@ -75,7 +75,7 @@ volatile unsigned int DAC_data ;// output value
 volatile SpiChannel spiChn = SPI_CHANNEL2 ;	// the SPI channel to use
 volatile int spiClkDiv = 2 ; // 20 MHz max speed for this DAC
 
-int fs=44100; //sampling rate for ADC
+int fs=8192; //sampling rate for ADC
 char buffer[60];
 //ADC value
  int adc_9;
@@ -156,8 +156,8 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
         primary=ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
     }
     */
-    primary=ReadADC10(0);
-    int temp=ReadADC10(1);
+    primary=(ReadADC10(0)<<6);
+    int temp=(ReadADC10(1)<<6);
     update(ref,temp);
     AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
  
@@ -166,9 +166,9 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
 void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     mT2ClearIntFlag();
     //NLMS filter 
-    desired=primary-innerproduct(ref,weights);
+    desired=primary-(innerproduct(ref,weights)>>6);
     for(i=0;i<order;i++) {
-        weights[i]=(int)(weights[i]+((ref[i]*mu*desired)/(innerproduct(ref,ref)+1)));
+        weights[i]=(int)(weights[i]+((ref[i]*desired)>>30));
     }
     //DAC_data=song-desired;
     DAC_data=desired;
