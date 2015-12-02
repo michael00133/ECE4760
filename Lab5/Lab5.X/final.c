@@ -124,12 +124,7 @@ static PT_THREAD (protothread_adc(struct pt *pt))
         // yield time 1 second
         PT_YIELD_TIME_msec(2);
         
-        // read the ADC from pin 24 (AN11)
-        // read the first buffer position
-        adc_9 = ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
-        AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
- 
-        
+       
         // NEVER exit while
       } // END WHILE(1)
   PT_END(pt);
@@ -146,17 +141,17 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
     }
     */
     primary=ReadADC10(0);
-    update(ref,ReadADC10(1));
-    
+    int temp=ReadADC10(1);
+    update(ref,temp);
     AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
-    input=1^input;//toggle input
+ 
 }
 
 void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     mT2ClearIntFlag();
     //NLMS filter 
     desired=primary-innerproduct(ref,weights);
-    for(i=1;i<order;i++) {
+    for(i=0;i<order;i++) {
         weights[i]=(int)(weights[i]+((ref[i]*mu*desired)/(innerproduct(ref,ref)+1)));
     }
     //DAC_data=song-desired;
@@ -278,7 +273,7 @@ void main(void) {
         // ADC_CLK_AUTO -- Internal counter ends sampling and starts conversion (Auto convert)
         // ADC_AUTO_SAMPLING_ON -- Sampling begins immediately after last conversion completes; SAMP bit is automatically set
         // ADC_AUTO_SAMPLING_OFF -- Sampling begins with AcquireADC10();
-        #define PARAM1  ADC_FORMAT_INTG16 | ADC_CLK_AUTO | ADC_AUTO_SAMPLING_OFF //
+        #define PARAM1  ADC_FORMAT_INTG16 | ADC_CLK_AUTO | ADC_AUTO_SAMPLING_ON //
 
 	// define setup parameters for OpenADC10
 	// ADC ref external  | disable offset test | disable scan mode | do 1 sample | use single buf | alternate mode off
@@ -418,7 +413,7 @@ void getParameters(UINT8 * bitsPerSample, UINT8 * numberOfChannels,
 // add new value to array and shift
 
 void update(int* array, int new) {
-    for (i=1;i<sizeof(array);i++){
+    for (i=1;i<order;i++){
         array[i-1]=array[i];
     }
     array[sizeof(array)-1]=new;
@@ -429,8 +424,9 @@ int innerproduct(int* a, int* b) {
     if (sizeof(a)!=sizeof(b)) {
         return 0;
     }
-    for (i=1;i<sizeof(a);i++) {
+    for (i=1;i<order;i++) {
         sum=sum+a[i]*b[i];
     }
+    return sum;
 }
 

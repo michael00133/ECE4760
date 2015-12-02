@@ -3,7 +3,7 @@
 clear
 close all
 c=@(x) round(2^16*x)/2^16;
-order=10;
+order=5;
 
 size=2;                         %time duration of inputs
 fs=8192;                                %digital sampling frequency
@@ -43,14 +43,14 @@ plot(t,ref)
 title('reference  (noisy noise)   (input2)');
 
 w=zeros(order,N+1);
-mu=1;
+mu=0.06;
 
 for i=order:N
    buffer = ref(i-order+1:i);                                   %current 32 points of reference
    desired(i) = c(primary(i)-buffer*w(:,i));                    %dot product reference and coeffs
-   p(i)=buffer*w(:,i);
+   p(i)=buffer*buffer';
    %mu=(primary(i)-buffer*w(:,i-1))^2/desired(i)^2;
-   w(:,i+1)=c(w(:,i)+(buffer.*mu*desired(i)/(buffer*buffer'+0.000001))');%update coeffs
+   w(:,i+1)=c(w(:,i)+(buffer.*mu*desired(i))');%update coeffs
 end
 
 subplot(4,1,4)
