@@ -46,6 +46,23 @@ typedef signed int fix16 ;
 #define fmt                 4
 #define notPCM              5
 #define stackSize           128     // cyclic buffer/stack
+#define AC_ZERO             2048    // since Dac resolution is 12-bits
+#define PB_CLK              SYS_FREQ
+
+volatile UINT16 LSTACK[stackSize];
+volatile UINT16 RSTACK[stackSize];
+volatile UINT32 BOS;
+volatile UINT32 TOS;
+
+volatile UINT32 msCounter = 0;
+volatile UINT32 randomvar = 0;
+volatile UINT32 CSlength = 0;
+volatile UINT32 j = 0;
+volatile UINT32 TIC=0, TOC=0;
+
+volatile UINT32 bufferCounter = 0;
+volatile UINT32 intCounter = 0;
+
 
 #define order 10 //order of nlms filter
 #define mu 0.006 //stepsize
@@ -57,7 +74,6 @@ static struct pt pt_refresh,pt_adc;
 volatile unsigned int DAC_data ;// output value
 volatile SpiChannel spiChn = SPI_CHANNEL2 ;	// the SPI channel to use
 volatile int spiClkDiv = 2 ; // 20 MHz max speed for this DAC
-volatile UINT32 j = 0;
 
 int fs=44100; //sampling rate for ADC
 char buffer[60];
@@ -77,10 +93,10 @@ int  innerproduct(int* a, int* b);
 void update(int* array, int new);
 void setupAudioPWM(void);
 void getFilename(char * buffer);
-void configureHardware(UINT32 sampleRate);
 void getParameters(UINT8 * bitsPerSample, UINT8 * numberOfChannels,
                         UINT32 * dataSize, UINT32 * sampleRate,
                         UINT32 * blockAlign);
+UINT8 getWavHeader(FSFILE * pointer);
 
 //==================== Calculate ===================== //
 static PT_THREAD (protothread_refresh (struct pt *pt))
@@ -211,10 +227,7 @@ void main(void) {
     mPORTBSetBits(BIT_4);              // initialize CS as high
     
     //play music stuff
-     FSFILE * pointer;
-//    FSFILE * pointer2;
-//    char path[30];
-//    char count = 30;
+    FSFILE * pointer;
     SearchRec rec;
     UINT8  attributes = ATTR_MASK;   // file can have any attributes
 
@@ -231,40 +244,107 @@ void main(void) {
     UINT16 retBytes;
     UINT16 unsign_audio;
     
-    // Reading from microSD Card
-    tft_setCursor(10, 50);
-    tft_setTextColor(ILI9340_YELLOW);  tft_setTextSize(3);
-    tft_writeString("\n\rLooking to detect media...\n\r");
+    // clear cyclic buffer
+    BOS = 0;
+    TOS = 0;
+    for (j=0; j<stackSize; j++) {
+        LSTACK[j] = 0;
+        RSTACK[j] = 0;
+    }
+    
     while (!MDD_MediaDetect());
-    tft_writeString("Found media!\n\r");
-
-    tft_writeString("\n\rInitializing library...\n\r");
-    // Initialize the library
     while (!FSInit());
-    tft_writeString("Initialized library!\n\r");
+ 
+    pointer = FSfopen("music.wav","r");
+    if (pointer != NULL) {
 
-    tft_writeString("\n\rShowing all WAV files in root directory:\n\r");
-    if (FindFirst("*.WAV", attributes, &rec) == 0) { // file found
-        sprintf(buffer,"%s\t%u KB\n\r", rec.filename, rec.filesize/1000);
-        tft_writeString(buffer);
-        while (FindNext(&rec) == 0) { // more files found
-            sprintf(buffer,"%s\t%u KB\n\r", rec.filename, rec.filesize/1000);
-            tft_writeString(buffer);
-        }
+      //  printf("Opened \"%s\"\n\r\n\r",txtBuffer);
+
+        if (getWavHeader(pointer) == allGood) {
+            
+            getParameters(&bitsPerSample, &numberOfChannels, &dataSize,
+                            &sampleRate, &blockAlign);
+            
+            //config hardware
+            PR2 = (PB_CLK/sampleRate) - 1;
+            mT2IntEnable(1);
+
+            bufferCounter = 0;
+            if (bitsPerSample < 8)
+                bitsPerSample = 8;
+            else if (bitsPerSample < 16)
+                bitsPerSample = 16;
+
+            TIC = msCounter;
+
+            while (bufferCounter < dataSize) {
+
+                retBytes = FSfread(audioStream, 1,
+                                stackSize*blockAlign, pointer);
+
+                for (lc = 0; lc < retBytes; lc += blockAlign) {
+                    if (bitsPerSample == 16) {
+                        audioByte = (audioStream[lc+1] << 4) |
+                            (audioStream[lc] >> 4);
+                        if (audioByte & 0x0800) {
+                            unsign_audio = ~(audioByte - 1);
+                            audioByte = AC_ZERO - unsign_audio;
+                        }
+                        else {
+                            audioByte = AC_ZERO + audioByte;
+                        }
+                        LSTACK[BOS] = 0x3000 | audioByte;
+
+                        if (numberOfChannels == 2) {
+                            audioByte = (audioStream[lc+3] << 4) |
+                                (audioStream[lc+2] >> 4);
+                            if (audioByte & 0x0800) {
+                                unsign_audio = ~(audioByte - 1);
+                                audioByte = AC_ZERO - unsign_audio;
+                            }
+                            else {
+                                audioByte = AC_ZERO + audioByte;
+                            }
+                        }
+                        RSTACK[BOS] = 0xB000 | audioByte;
+                    }
+                    else {
+                        audioByte = audioStream[lc] << 4;
+                        LSTACK[BOS] = 0x3000 | audioByte;
+                        if (numberOfChannels == 2) {
+                            audioByte = audioStream[lc+1] << 4;
+                        }
+
+                        RSTACK[BOS] = 0xB000 | audioByte;
+                    }
+
+                    if (++BOS == stackSize) BOS = 0;
+
+                    if (bitsPerSample == 16) {
+                        while (BOS == (TOS-2));
+                    }
+                    else {
+                        while (BOS == (TOS-2)) {
+// for some reason, not putting a delay here makes the 8-bit part not work (?)
+                            UINT32 temp = msCounter;
+                            while ((msCounter - temp) < 2);
+                        }
+                    }
+
+                }   // for (lc ... )...
+
+                bufferCounter += retBytes;
+                T2CONSET = 0x8000;
+            }   // while (bufferCounter < dataSize) ...
+
+            FSfclose(pointer);
+        } // if (pointer != NULL), ie if read audio file correctly
     }
 
-    // GET FILE NAME TO PLAY
-    j = 0;
-    while (j == 0) {
-        tft_writeString("\n\rSelect which file to play\n\r");
-        getFilename(&txtBuffer);
-        if (FindFirst(txtBuffer, attributes, &rec)) {
-            tft_writeString("Invalid file! Try again!\n\r");
-        }
-        else {
-            j = 1;
-        }
-    }
+    T2CON = 0;
+    TMR2 = 0;
+    mT2IntEnable(0);
+    mT2ClearIntFlag();
     
     // the ADC ///////////////////////////////////////
         // configure and enable the ADC
