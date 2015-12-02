@@ -421,10 +421,7 @@ void update(int* array, int new) {
 
 int innerproduct(int* a, int* b) {
     int sum=0;
-    if (sizeof(a)!=sizeof(b)) {
-        return 0;
-    }
-    for (i=1;i<order;i++) {
+    for (i=0;i<order;i++) {
         sum=sum+a[i]*b[i];
     }
     return sum;
