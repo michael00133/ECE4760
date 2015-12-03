@@ -17,8 +17,9 @@ voice=cos(2*pi*f1*t);
 voice=load('handel');
 fs=voice.Fs;
 voice=2^16*voice.y'/max(voice.y);
+voice=voice-min(voice);
 % voice=voice(1:fs*10)';
- voice=c(voice);
+% voice=c(voice);
 N=length(voice);
 t=[0:1/fs:(N-1)/fs];
 % voice=zeros(1,N);
@@ -27,9 +28,10 @@ plot(t,voice);
 title('voice    (don''t have access to)')
 
 noise=2^16*cos(2*pi*f2.*t.^2);                                %increasy frequency noise
-
+noise=noise-min(noise);
+noise=noise/max(noise);
 %noise=rand(1,N);                %white noise
-noise=c(noise);
+%noise=c(noise);
 primary=voice+0.2*circshift(noise,[0 -round(0.1*fs)]);
 primary=c(primary);
 subplot(4,1,2)
@@ -37,7 +39,7 @@ plot(t,primary)
 title('primary = voice + noise   (input1)')
 
 ref=noise+0.1*2^16*rand(1,N);                                             %noisy noise
-ref=c(ref);
+%ref=c(ref);
 subplot(4,1,3)
 plot(t,ref)
 title('reference  (noisy noise)   (input2)');
@@ -47,10 +49,10 @@ mu=1/(2^30);
 
 for i=order:N
    buffer = ref(i-order+1:i);                                   %current 32 points of reference
-   desired(i) = c(primary(i)-buffer*w(:,i)/(2^6));                    %dot product reference and coeffs
-   p(i)=buffer*buffer';
+   desired(i) = primary(i)-buffer*w(:,i)/(2^6);                    %dot product reference and coeffs
+   p(i)=buffer*w(:,i);
    %mu=(primary(i)-buffer*w(:,i-1))^2/desired(i)^2;
-   w(:,i+1)=c(w(:,i)+(buffer.*mu*desired(i))');%update coeffs
+   w(:,i+1)=int32(w(:,i)+(buffer.*mu*desired(i))');%update coeffs
 end
 
 subplot(4,1,4)
