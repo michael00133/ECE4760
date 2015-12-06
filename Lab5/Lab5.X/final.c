@@ -178,7 +178,7 @@ void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
             int temp = -1*desired;
             weights[i]=1;//(int)(weights[i]-((ref[i]*temp)>>30));
         }
-        
+        //todo: remove
         if (weights[i] < 0)
             weights[i] = 0;
     }
