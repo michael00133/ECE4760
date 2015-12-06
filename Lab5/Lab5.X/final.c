@@ -163,7 +163,7 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
  
 }
 
-void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
+void __ISR(_TIMER_2_VECTOR, ipl2) Timer4Handler(void){
     mT2ClearIntFlag();
     //NLMS filter 
     if(innerproduct(ref,weights)>=0){
@@ -199,7 +199,12 @@ void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     // test for ready
      while (TxBufFullSPI2());
      // write to spi2 
-     WriteSPI2(DAC_config_chan_A | DAC_data); //data output pin 14
+     //WriteSPI2(DAC_config_chan_A | DAC_data); //data output pin 14
+     WriteSPI2(LSTACK[TOS]); 
+     WriteSPI2(RSTACK[TOS]);  
+    
+    if (++TOS == stackSize)
+        TOS = 0;
     // test for done
     while (SPI2STATbits.SPIBUSY); // wait for end of transaction
      // CS high
@@ -234,9 +239,9 @@ void main(void) {
     ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_3);
     mT3ClearIntFlag();
     
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, SYS_FREQ/fs);
-    ConfigIntTimer4(T4_INT_ON | T4_INT_PRIOR_2);
-    mT2ClearIntFlag();
+//    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, PR2);
+  //  ConfigIntTimer4(T4_INT_ON | T4_INT_PRIOR_2);
+   // mT2ClearIntFlag();
         
     // initialize MOSI
     PPSOutput(2, RPB5, SDO2);			// MOSI for DAC
@@ -244,9 +249,10 @@ void main(void) {
     mPORTBSetBits(BIT_4);              // initialize CS as high
     
     
-    /*
+    
     //play music stuff
     FSFILE * pointer;
+    
     SearchRec rec;
     UINT8  attributes = ATTR_MASK;   // file can have any attributes
 
@@ -273,11 +279,9 @@ void main(void) {
     
     while (!MDD_MediaDetect());
     while (!FSInit());
- 
-    pointer = FSfopen("music.wav","r");
+   
+    pointer = FSfopen("song.wav","r");
     if (pointer != NULL) {
-
-      //printf("Opened \"%s\"\n\r\n\r",txtBuffer);
 
         if (getWavHeader(pointer) == allGood) {
             
@@ -366,7 +370,7 @@ void main(void) {
     mT2ClearIntFlag();
     
     TOC = msCounter - TIC;
-    */
+    
     // the ADC ///////////////////////////////////////
     // configure and enable the ADC
 	CloseADC10();	// ensure the ADC is off before setting the configuration
