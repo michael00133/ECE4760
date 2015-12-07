@@ -84,12 +84,13 @@ int timeElapsed =1;
  //primary in pin 24(muxA) ref in pin 7(muxB)
  int ref[order];
  int primary;
- int weights[order];
+ float weights[order];
  int desired;
 int i;
  
 
 int  innerproduct(int* a, int* b);
+int  innerproductf(int* a, float* b);
 void update(int* array, int new);
 void setupAudioPWM(void);
 void getFilename(char * buffer);
@@ -156,40 +157,29 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
         primary=ReadADC10(0);   // read the result of channel 9 conversion from the idle buffer
     }
     */
-    primary=((ReadADC10(0))<<6);
-    int temp=(ReadADC10(1)<<6);
+    primary=((ReadADC10(0)));
+    int temp=(ReadADC10(1));
     update(ref,temp);
     AcquireADC10(); // not needed if ADC_AUTO_SAMPLING_ON below
  
 }
 
-void __ISR(_TIMER_2_VECTOR, ipl2) Timer4Handler(void){
+void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     mT2ClearIntFlag();
     //NLMS filter 
-    if(innerproduct(ref,weights)>=0){
-        desired=primary-(innerproduct(ref,weights)>>6);
-    } else {
-       desired=primary+((-1*innerproduct(ref,weights))>>6);
-    }
+    desired=primary-(innerproductf(ref,weights));
     for(i=0;i<order;i++) {
-        if(desired >= 0)
-            weights[i]=(int)(weights[i]+((ref[i]*desired)>>30));
-        else {
-            int temp = -1*desired;
-            weights[i]=1;//(int)(weights[i]-((ref[i]*temp)>>30));
-        }
-        //todo: remove
-        if (weights[i] < 0)
-            weights[i] = 0;
+        
+        weights[i]=weights[i]+(mu*ref[i]*desired);
     }
     //DAC_data=song-desired;
     if (desired>=0){
-        int temp =2*(desired>>6)+2047;
+        int temp =2*(desired)+2047;
         if (temp < 4095)
             DAC_data = temp;
     }
     else {
-        int temp=-2*((-1*desired)>>6)+2047;
+        int temp=-2*((-1*desired))+2047;
         if(temp > 0)
             DAC_data = temp;
    // DAC_data=2*(innerproduct(ref,weights)>>6);
@@ -239,9 +229,9 @@ void main(void) {
     ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_3);
     mT3ClearIntFlag();
     
-//    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, PR2);
-  //  ConfigIntTimer4(T4_INT_ON | T4_INT_PRIOR_2);
-   // mT2ClearIntFlag();
+    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, PR2);
+    ConfigIntTimer4(T4_INT_ON | T4_INT_PRIOR_2);
+    mT4ClearIntFlag();
         
     // initialize MOSI
     PPSOutput(2, RPB5, SDO2);			// MOSI for DAC
@@ -545,3 +535,10 @@ int innerproduct(int* a, int* b) {
     return sum;
 }
 
+int innerproductf(int* a, float* b) {
+    int sum=0;
+    for (i=0;i<order;i++) {
+        sum=sum+a[i]*b[i];
+    }
+    return sum;
+}
