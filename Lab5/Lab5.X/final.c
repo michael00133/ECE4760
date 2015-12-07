@@ -179,8 +179,8 @@ void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
             DAC_data = temp;
     }
     else {
-        int temp=-2*((-1*desired))+2047;
-        if(temp > 0)
+        int temp=-2*desired+2047;
+        if(temp >= 0)
             DAC_data = temp;
    // DAC_data=2*(innerproduct(ref,weights)>>6);
     }
