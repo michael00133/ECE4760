@@ -165,7 +165,7 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
 }
 
 void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
-    mT2ClearIntFlag();
+    mT4ClearIntFlag();
     //NLMS filter 
     desired=primary-(innerproductf(ref,weights));
     for(i=0;i<order;i++) {
