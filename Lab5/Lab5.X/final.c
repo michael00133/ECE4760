@@ -65,7 +65,7 @@ volatile UINT32 intCounter = 0;
 
 
 #define order 5 //order of nlms filter
-#define mu pow(10,-7)       //stepsize
+#define mu 0.8*pow(10,-9)       //stepsize
 UINT8 receiveBuffer[100];
 char txtBuffer[100];
 
