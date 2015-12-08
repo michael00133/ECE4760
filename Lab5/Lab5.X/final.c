@@ -64,8 +64,8 @@ volatile UINT32 bufferCounter = 0;
 volatile UINT32 intCounter = 0;
 
 
-#define order 10 //order of nlms filter
-#define mu pow(10,-10)       //stepsize
+#define order 5 //order of nlms filter
+#define mu pow(10,-7)       //stepsize
 UINT8 receiveBuffer[100];
 char txtBuffer[100];
 
@@ -75,7 +75,7 @@ volatile unsigned int DAC_data ;// output value
 volatile SpiChannel spiChn = SPI_CHANNEL2 ;	// the SPI channel to use
 volatile int spiClkDiv = 2 ; // 20 MHz max speed for this DAC
 
-int fs=44100; //sampling rate for ADC
+int fs=8192; //sampling rate for ADC
 char buffer[60];
 //ADC value
  int adc_9;
@@ -84,12 +84,28 @@ int timeElapsed =1;
  //primary in pin 24(muxA) ref in pin 7(muxB)
  int ref[order];
  int primary;
+
  float weights[order];
- float desired;
+ int desired;
 int i;
- 
+
+// Equalizer data structs
+#define equal_order 18
+#define fixed_point 64
+int desired_buf[equal_order];
+int weights_eq[5];
+int fb_tot[equal_order];
+int fb0[equal_order] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int fb1[equal_order] = {-57,	98,	76,	76,	84,	93,	102, 109, 112, 112,	109, 102, 93, 84, 76, 76, 98, -57};
+int fb2[equal_order] = {-63, -152, -35, -73, -24, 5, 49, 80,	100, 100, 80, 49, 5, -24, -73, -35, -152, -63};
+int fb3[equal_order] = {135,	14,	-28,	-77,	-104,	-90,	-36,	30,	76,	76,	30,	-36,	-90,	-104,	-77,	-28,	14,	135};
+int fb4[equal_order] = {-63,	104,	95,	-178,	-36,	-442,	386,	386,	-442,	-36,	-178,	95,	104,	-63,	0,	0,	0,	0};
+int  innerproduct_eq(int* a, int* b);
+void update_eq(int* a, int b);
+void update_fb(int* a, int b);
 
 int  innerproduct(int* a, int* b);
+
 float  innerproductf(int* a, float* b);
 void update(int* array, int new);
 void setupAudioPWM(void);
@@ -167,18 +183,21 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
 void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     mT4ClearIntFlag();
     //NLMS filter 
-   desired=primary-(innerproductf(ref,weights));
-   desired=primary-ref[order-1];
-   
+   desired=(int)(primary-(innerproductf(ref,weights)));
+   //desired=primary-ref[0]*weights[0]-ref[1]*weights[1]-ref[2]*weights[2]-ref[3]*weights[3]-ref[order-1]*weights[order-1];
+   update_eq(desired_buf,desired);
     for(i=0;i<order;i++) {
         
-        weights[i]=weights[i]+(mu*ref[i]*desired/innerproduct(ref,ref));
+       weights[i]=weights[i]+(float)(mu*ref[i]*desired);
+        //weights[i]=0;
     }
+   //weights[order-1]=1;
     //DAC_data=song-desired;
-   int temp=desired;
+   int temp=innerproduct_eq(fb_tot,desired_buf)/fixed_point;
    if (temp>0 && temp <4096) {
     DAC_data=temp;
    }
+   //DAC_data=(int)(innerproductf(ref,weights));
     // CS low to start transaction
      mPORTBClearBits(BIT_4); // start transaction
     // test for ready
@@ -217,7 +236,7 @@ void main(void) {
     PT_setup();
     
    
-        
+    int weights_eq[5] = {fixed_point, 0, 0, 0, 0};
     //CONFIGS!!!!!!
         
     OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, SYS_FREQ/(fs));
@@ -394,7 +413,15 @@ void main(void) {
 
 	EnableADC10(); // Enable the ADC
   ///////////////////////////////////////////////////////
-        
+    int iter = 0;
+    for(iter = 0; iter<order; iter++) {
+        update(ref,0);
+    }
+    iter = 0;
+    for(iter = 0; iter<equal_order; iter++) {
+        update_fb(desired_buf,0);
+        update_fb(fb_tot, weights_eq[0]*fb0[iter] + (weights_eq[1]*fb1[iter] + weights_eq[2]*fb2[iter] + weights_eq[3]*fb3[iter] + weights_eq[4]*fb4[iter])/fixed_point);
+    }
     // initialize the threads
     PT_INIT(&pt_refresh);
     PT_INIT(&pt_adc);
@@ -522,9 +549,31 @@ void update(int* array, int new) {
     array[order-1]=new;
 }
 
+// in this update, the most recent value is stored in the 0th index
+void update_eq(int* array, int new) {
+    for (i=equal_order-1;i>1;i--){
+        array[i]=array[i-1];
+    }
+    array[0]=new;
+}
+void update_fb(int* array, int new) {
+    for (i=1;i<equal_order;i++){
+        array[i-1]=array[i];
+    }
+    array[equal_order-1]=new;
+}
+
 int innerproduct(int* a, int* b) {
     int sum=0;
     for (i=0;i<order;i++) {
+        sum=sum+a[i]*b[i];
+    }
+    return sum;
+}
+
+int innerproduct_eq(int* a, int* b) {
+    int sum=0;
+    for (i=0;i<equal_order;i++) {
         sum=sum+a[i]*b[i];
     }
     return sum;
