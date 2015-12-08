@@ -64,8 +64,8 @@ volatile UINT32 bufferCounter = 0;
 volatile UINT32 intCounter = 0;
 
 
-#define order 5 //order of nlms filter
-#define mu 0.8*pow(10,-9)       //stepsize
+#define order 3 //order of nlms filter
+#define mu 7*pow(10,-16)       //stepsize
 UINT8 receiveBuffer[100];
 char txtBuffer[100];
 
@@ -75,7 +75,7 @@ volatile unsigned int DAC_data ;// output value
 volatile SpiChannel spiChn = SPI_CHANNEL2 ;	// the SPI channel to use
 volatile int spiClkDiv = 2 ; // 20 MHz max speed for this DAC
 
-int fs=8192; //sampling rate for ADC
+int fs=16000; //sampling rate for ADC
 char buffer[60];
 //ADC value
  int adc_9;
