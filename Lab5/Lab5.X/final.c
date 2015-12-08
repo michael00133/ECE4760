@@ -64,8 +64,8 @@ volatile UINT32 bufferCounter = 0;
 volatile UINT32 intCounter = 0;
 
 
-#define order 5 //order of nlms filter
-#define mu 0.006 //stepsize
+#define order 10 //order of nlms filter
+#define mu pow(10,-10)       //stepsize
 UINT8 receiveBuffer[100];
 char txtBuffer[100];
 
@@ -85,12 +85,12 @@ int timeElapsed =1;
  int ref[order];
  int primary;
  float weights[order];
- int desired;
+ float desired;
 int i;
  
 
 int  innerproduct(int* a, int* b);
-int  innerproductf(int* a, float* b);
+float  innerproductf(int* a, float* b);
 void update(int* array, int new);
 void setupAudioPWM(void);
 void getFilename(char * buffer);
@@ -167,34 +167,29 @@ void __ISR(_TIMER_3_VECTOR, ipl3) Timer3Handler(void){
 void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void){
     mT4ClearIntFlag();
     //NLMS filter 
-    desired=primary-(innsharereproductf(ref,weights));
+   desired=primary-(innerproductf(ref,weights));
+   desired=primary-ref[order-1];
+   
     for(i=0;i<order;i++) {
         
-        weights[i]=weights[i]+(mu*ref[i]*desired);
+        weights[i]=weights[i]+(mu*ref[i]*desired/innerproduct(ref,ref));
     }
     //DAC_data=song-desired;
-    if (desired>=0){
-        int temp =2*(desired)+2047;
-        if (temp < 4095)
-            DAC_data = temp;
-    }
-    else {
-        int temp=-2*desired+2047;
-        if(temp >= 0)
-            DAC_data = temp;
-   // DAC_data=2*(innerproduct(ref,weights)>>6);
-    }
+   int temp=desired;
+   if (temp>0 && temp <4096) {
+    DAC_data=temp;
+   }
     // CS low to start transaction
      mPORTBClearBits(BIT_4); // start transaction
     // test for ready
      while (TxBufFullSPI2());
      // write to spi2 
-     //WriteSPI2(DAC_config_chan_A | DAC_data); //data output pin 14
-     WriteSPI2(LSTACK[TOS]); 
-     WriteSPI2(RSTACK[TOS]);  
+     WriteSPI2(DAC_config_chan_A | DAC_data); //data output pin 14
+     //WriteSPI2(LSTACK[TOS]); 
+     //WriteSPI2(RSTACK[TOS]);  
     
-    if (++TOS == stackSize)
-        TOS = 0;
+   // if (++TOS == stackSize)
+     //   TOS = 0;
     // test for done
     while (SPI2STATbits.SPIBUSY); // wait for end of transaction
      // CS high
@@ -237,7 +232,7 @@ void main(void) {
     PPSOutput(2, RPB5, SDO2);			// MOSI for DAC
     mPORTBSetPinsDigitalOut(BIT_4);		// CS for DAC
     mPORTBSetBits(BIT_4);              // initialize CS as high
-    
+    /*
     
     
     //play music stuff
@@ -360,7 +355,7 @@ void main(void) {
     mT2ClearIntFlag();
     
     TOC = msCounter - TIC;
-    
+    */
     // the ADC ///////////////////////////////////////
     // configure and enable the ADC
 	CloseADC10();	// ensure the ADC is off before setting the configuration
@@ -524,7 +519,7 @@ void update(int* array, int new) {
     for (i=1;i<order;i++){
         array[i-1]=array[i];
     }
-    array[sizeof(array)-1]=new;
+    array[order-1]=new;
 }
 
 int innerproduct(int* a, int* b) {
@@ -535,8 +530,8 @@ int innerproduct(int* a, int* b) {
     return sum;
 }
 
-int innerproductf(int* a, float* b) {
-    int sum=0;
+float innerproductf(int* a, float* b) {
+    float sum=0;
     for (i=0;i<order;i++) {
         sum=sum+a[i]*b[i];
     }
